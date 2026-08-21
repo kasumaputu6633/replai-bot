@@ -1,21 +1,9 @@
 import type { SourceContext } from '../context/types.js';
 import type { ResearchInput, ResearchMode } from './types.js';
-
-const VERIFICATION_QUESTION =
-  /(?:\bis (?:this|that) true\b|\b(?:verify|verification|fact[ -]?check|true or false)\b|\b(?:cek fakta|verifikasi|benar|salah|hoaks?|valid|akurat|bukti)\b)/iu;
-const COMPARISON_QUESTION =
-  /\b(?:compare|comparison|competitors?|alternatives?|versus|vs\.?|bandingkan|perbandingan|pembanding|dibanding(?:kan)?|kompetitor|saingan|alternatif|persamaan|perbedaan)\b/iu;
+import { buildResearchPlan } from './intent.js';
 
 export function resolveResearchMode(input: ResearchInput): ResearchMode {
-  if (input.mode) {
-    return input.mode;
-  }
-
-  if ((input.comparisonSources?.length ?? 0) > 0 || COMPARISON_QUESTION.test(input.question)) {
-    return 'compare';
-  }
-
-  return VERIFICATION_QUESTION.test(input.question) ? 'verify' : 'answer';
+  return buildResearchPlan(input).mode;
 }
 
 export function hasRequiredModeStructure(
@@ -29,12 +17,17 @@ export function hasRequiredModeStructure(
     return true;
   }
 
-  const requiredHeadingGroups = [['Verdict'], ['Evidence'], ['Confidence'], ['Limitations']];
+  const requiredHeadingGroups = [
+    ['Verdict', 'Kesimpulan'],
+    ['Evidence', 'Bukti'],
+    ['Confidence', 'Tingkat Keyakinan'],
+    ['Limitations', 'Batasan'],
+  ];
 
   return requiredHeadingGroups.every((headings) =>
     headings.some((heading) =>
       new RegExp(
-        `^(?:#{1,6}\\s*)?(?:\\*\\*)?${heading}(?::(?:\\*\\*)?|(?:\\*\\*)?:)\\s*`,
+        `^(?:#{1,6}\\s*)?(?:\\*\\*)?${heading}(?:\\s*\\([^)]*\\))?(?::(?:\\*\\*)?|(?:\\*\\*)?:)\\s*`,
         'imu',
       ).test(content),
     ),
@@ -91,6 +84,10 @@ export function ensureResearchModeStructure(
   }
 
   if (mode === 'verify') {
+    const hasExistingSections = /^(?:#{1,6}\s*)?(?:\*\*)?(?:Verdict|Kesimpulan|Evidence|Bukti|Confidence|Tingkat Keyakinan|Limitations|Batasan)\b/imu.test(
+      content,
+    );
+    if (hasExistingSections) return content;
     return `Verdict: Tidak cukup bukti.\n\nEvidence: ${content}\n\nConfidence: Rendah.\n\nLimitations: Respons penyedia tidak menghasilkan struktur verifikasi yang lengkap, jadi kesimpulan tegas tidak dapat diberikan.`;
   }
 

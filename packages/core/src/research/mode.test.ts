@@ -43,6 +43,14 @@ describe('research modes', () => {
     expect(content).toContain('Limitations:');
   });
 
+  it('accepts bilingual verification headings without wrapping them again', () => {
+    const draft =
+      'Verdict (Kesimpulan): Tidak cukup bukti.\n\nEvidence (Bukti): Hanya ada satu gambar.\n\nConfidence (Tingkat Keyakinan): Rendah.\n\nLimitations (Batasan): Perasaan pribadi tidak terlihat.';
+
+    expect(hasRequiredModeStructure(draft, 'verify')).toBe(true);
+    expect(ensureResearchModeStructure(draft, 'verify')).toBe(draft);
+  });
+
   it('keeps comparison prose natural without requiring report headings', () => {
     const draft =
       'JCode unggul untuk terminal ringan, sedangkan Kilo Code lebih cocok untuk workflow terintegrasi.';

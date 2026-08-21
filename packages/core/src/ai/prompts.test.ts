@@ -1,7 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { buildResearchPrompt, REPLAI_SYSTEM_PROMPT } from './prompts.js';
+import {
+  buildCasualPrompt,
+  buildResearchPrompt,
+  buildResponseRepairPrompt,
+  REPLAI_SYSTEM_PROMPT,
+} from './prompts.js';
 
 describe('buildResearchPrompt', () => {
+  it('uses a citation-free compact contract for casual Discord input', () => {
+    const prompt = buildCasualPrompt({
+      question: 'kelihatan banget belum mandi ya kan',
+      source: {
+        messageId: 'casual',
+        text: 'kelihatan banget belum mandi ya kan',
+        urls: [],
+        images: [{ url: 'https://cdn.discordapp.com/image.png' }],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    expect(prompt).toContain('UNTRUSTED CASUAL DISCORD INPUT');
+    expect(prompt).toContain('one to three short sentences');
+    expect(prompt).not.toContain('trustedEvidenceCatalog');
+    expect(prompt).not.toContain('internal citation markers');
+  });
+
+  it('uses mode-specific repair instructions', () => {
+    const verify = buildResponseRepairPrompt('verify', 'draft');
+    const compare = buildResponseRepairPrompt('compare', 'draft');
+
+    expect(verify).toContain('exactly one Verdict, Evidence, Confidence, and Limitations');
+    expect(verify).not.toContain('comparison targets');
+    expect(compare).toContain('comparison targets');
+    expect(compare).not.toContain('verification structure');
+  });
   it('includes live search evidence and its citation URL', () => {
     const prompt = buildResearchPrompt(
       {

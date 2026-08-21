@@ -21,7 +21,7 @@ const input: ResearchInput = {
 describe('buildWebSearchQuery', () => {
   it('includes the claim, question, and current date', () => {
     expect(buildWebSearchQuery(input, new Date('2026-08-21T00:00:00.000Z'))).toBe(
-      'A claim about a recent event\nIs this current?\nCurrent date: 2026-08-21',
+      'Question: Is this current?\nSource context: A claim about a recent event\nCurrent date: 2026-08-21',
     );
   });
 
@@ -68,8 +68,30 @@ describe('buildWebSearchQuery', () => {
 });
 
 describe('hasSearchableWebContext', () => {
-  it('allows search when the source contains a textual claim', () => {
+  it('allows search when the question explicitly asks for current information', () => {
     expect(hasSearchableWebContext(input)).toBe(true);
+  });
+
+  it('does not search merely because source text exists', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'jelaskan pendapat ini',
+        source: { ...input.source, text: 'pendapat seseorang di Discord' },
+      }),
+    ).toBe(false);
+  });
+
+  it('puts the question first and removes duplicated direct-message text', () => {
+    const query = buildWebSearchQuery(
+      {
+        question: 'cuaca Denpasar hari ini?',
+        source: { ...input.source, text: 'cuaca Denpasar hari ini?' },
+      },
+      new Date('2026-08-21T00:00:00.000Z'),
+    );
+
+    expect(query.match(/cuaca Denpasar hari ini\?/gu)).toHaveLength(1);
+    expect(query.startsWith('Question:')).toBe(true);
   });
 
   it('skips search for image-only identification', () => {

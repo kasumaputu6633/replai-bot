@@ -137,13 +137,11 @@ describe('appendTrustedSources', () => {
     expect(result).toContain('- [Source 6](<https://example.com/6>)');
   });
 
-  it('adds a small deterministic fallback list without inserting inline citations', () => {
+  it('does not present uncited search results as supporting sources', () => {
     const result = appendTrustedSources('No inline claim citation was produced.', catalog);
 
-    expect(result).toMatch(/^No inline claim citation was produced\.\n\n\*\*Sources\*\*/u);
-    expect(result).not.toMatch(/produced\. \[\d+\]/u);
-    expect(result).toContain('- [example.com](<https://example.com/report?a=1&b=2>)');
-    expect(result).toContain('- [Second source](<https://other.example/article>)');
+    expect(result).toBe('No inline claim citation was produced.');
+    expect(result).not.toContain('**Sources**');
   });
 
   it('caps a citation-heavy source list while hiding its markers', () => {

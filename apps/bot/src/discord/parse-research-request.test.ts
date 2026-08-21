@@ -64,6 +64,13 @@ describe('parseResearchRequest', () => {
     ]);
   });
 
+  it.each([
+    'menurutmu apakah dia sedang jatuh cinta gak dengan salah satu orang didiscord ini?',
+    'ada mitos jika kamu panggil dia tiga kali, ia akan datang ke kamar kamu',
+  ])('does not freeze casual banter into verification mode: %s', (question) => {
+    expect(parseResearchRequest({ question, source: source() }).mode).toBe('answer');
+  });
+
   it('creates explicit isolated targets for multiple source links only in compare mode', () => {
     const urls = ['https://one.example/', 'https://two.example/'];
     const input = parseResearchRequest({

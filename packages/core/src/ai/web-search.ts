@@ -1,22 +1,12 @@
 import { z } from 'zod';
 import { ResearchProviderError } from '../errors/index.js';
+import { buildResearchPlan } from '../research/intent.js';
 import { researchTargetLabel, resolveResearchMode } from '../research/mode.js';
 import type { ResearchInput } from '../research/types.js';
 import type { WebSearchResult } from './types.js';
 
 const MAX_SEARCH_QUERY_LENGTH = 500;
 const SEARCH_TIMEOUT_MS = 20_000;
-const CASUAL_GREETING_OR_THANKS =
-  /^(?:(?:halo|hai|hey|hi|yo|pagi|siang|malam|apa kabar|makasih|terima kasih|thanks?|thx|wkwk|haha)[\s!,.?]*)+$/iu;
-const CASUAL_BANTER =
-  /\b(?:wkwk+|haha+|hehe+|lol|lmao|bercanda|jokes?|lucu|ngakak|receh|roast)\b/iu;
-const RELATIONSHIP_BANTER =
-  /\b(?:saling\s+suka|naksir|gebetan|jadian|pacaran|chemistry|bucin|cinlok|shipping|di-?ship|crush)\b/iu;
-const CASUAL_SPECULATION =
-  /\b(?:menurut(?:\s+(?:kamu|lu|loe|lo))?|menurutmu|kira[- ]?kira|kayaknya|bakal|tebak(?:an)?|guess)\b/iu;
-const PRIVATE_DISCORD_CONTEXT =
-  /(?:\b(?:discord|server\s+ini|di\s+(?:server|sini)|member|anggota|obrolan|chat|dia|mereka|orang\s+ini)\b|\bdi\s*discord\b)/iu;
-
 const searchResponseSchema = z.object({
   results: z.array(
     z.object({
@@ -53,12 +43,18 @@ export function buildWebSearchQuery(input: ResearchInput, now = new Date()): str
     return targetContext.slice(0, MAX_SEARCH_QUERY_LENGTH);
   }
 
+  const normalizedQuestion = input.question.replace(/\s+/gu, ' ').trim().toLocaleLowerCase('en-US');
+  const sourceText = input.source.text?.trim();
+  const distinctSourceText =
+    sourceText?.replace(/\s+/gu, ' ').toLocaleLowerCase('en-US') === normalizedQuestion
+      ? undefined
+      : sourceText;
   const context = [
-    input.source.text,
+    `Question: ${input.question}`,
+    distinctSourceText ? `Source context: ${distinctSourceText}` : undefined,
     ...input.source.urls,
     ...embedText,
     ...input.source.embeds.flatMap((embed) => (embed.url ? [embed.url] : [])),
-    input.question,
     `Current date: ${now.toISOString().slice(0, 10)}`,
   ]
     .filter((value): value is string => Boolean(value?.trim()))
@@ -68,25 +64,11 @@ export function buildWebSearchQuery(input: ResearchInput, now = new Date()): str
 }
 
 export function isCasualConversationInput(input: ResearchInput): boolean {
-  return (
-    resolveResearchMode(input) === 'answer' &&
-    (CASUAL_GREETING_OR_THANKS.test(input.question.trim()) ||
-      CASUAL_BANTER.test(input.question) ||
-      RELATIONSHIP_BANTER.test(input.question) ||
-      (CASUAL_SPECULATION.test(input.question) && PRIVATE_DISCORD_CONTEXT.test(input.question)))
-  );
+  return buildResearchPlan(input).interaction === 'casual';
 }
 
 export function hasSearchableWebContext(input: ResearchInput): boolean {
-  if (isCasualConversationInput(input)) {
-    return false;
-  }
-
-  return Boolean(
-    input.source.text?.trim() ||
-      input.source.urls.length > 0 ||
-      input.source.embeds.some((embed) => embed.title || embed.description || embed.url),
-  );
+  return buildResearchPlan(input).search !== 'none';
 }
 
 export class NineRouterWebSearchClient {

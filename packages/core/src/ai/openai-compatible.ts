@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 import { ResearchProviderError } from '../errors/index.js';
+import { buildResearchPlan } from '../research/intent.js';
 import {
   appendTrustedSources,
   buildTrustedEvidenceCatalog,
@@ -12,13 +13,17 @@ import {
   hasComparisonTargetCoverage,
   hasRequiredModeStructure,
   researchTargetLabel,
-  resolveResearchMode,
 } from '../research/mode.js';
 import { researchInputSchema } from '../research/schemas.js';
 import type { ResearchInput, ResearchResult } from '../research/types.js';
 import { guardResearchOutput, isResearchRefusal } from '../security/guard.js';
 import type { ResearchProvider } from './provider.js';
-import { buildResearchPrompt, REPLAI_SYSTEM_PROMPT } from './prompts.js';
+import {
+  buildCasualPrompt,
+  buildResearchPrompt,
+  buildResponseRepairPrompt,
+  REPLAI_SYSTEM_PROMPT,
+} from './prompts.js';
 import type { OpenAICompatibleProviderConfig } from './types.js';
 import {
   isAllowedWebFetchUrl,
@@ -28,7 +33,6 @@ import {
 import {
   buildWebSearchQuery,
   hasSearchableWebContext,
-  isCasualConversationInput,
   NineRouterWebSearchClient,
 } from './web-search.js';
 
@@ -67,8 +71,9 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
     const validatedInput = researchInputSchema.parse(input);
 
     try {
-      const mode = resolveResearchMode(validatedInput);
-      const isCasualConversation = isCasualConversationInput(validatedInput);
+      const plan = buildResearchPlan(validatedInput);
+      const mode = plan.mode;
+      const isCasualConversation = plan.interaction === 'casual';
       const sources = [
         validatedInput.source,
         ...(validatedInput.comparisonSources ?? []),
@@ -84,7 +89,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
               promise: this.#webSearch!.search(buildWebSearchQuery(searchInput)),
             }))
         : [];
-      const fetchUrls = isCasualConversation
+      const fetchUrls = !plan.fetchSourceUrls
         ? []
         : [
             ...new Set(
@@ -118,12 +123,14 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
       const content: ChatCompletionContentPart[] = [
         {
           type: 'text',
-          text: buildResearchPrompt(
-            validatedInput,
-            webSearchResults,
-            webFetchResults,
-            evidenceCatalog,
-          ),
+          text: isCasualConversation
+            ? buildCasualPrompt(validatedInput)
+            : buildResearchPrompt(
+                validatedInput,
+                webSearchResults,
+                webFetchResults,
+                evidenceCatalog,
+              ),
         },
         ...validatedInput.source.images.map((image) => ({
           type: 'image_url' as const,
@@ -138,7 +145,10 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
               ...content,
               {
                 type: 'text',
-                text: `RESPONSE REPAIR REQUEST\nThe previous draft missed one or more comparison targets or their evidence. Rewrite it naturally, mention every option by name, compare the same practical criteria, preserve only evidence-supported claims and valid [n] citations, and give a useful recommendation. Do not add rigid report headings or repetitive template sentences.\nPREVIOUS DRAFT (UNTRUSTED JSON STRING)\n${JSON.stringify(previousDraft)}\nEND PREVIOUS DRAFT`,
+                text: buildResponseRepairPrompt(
+                  mode === 'verify' ? 'verify' : 'compare',
+                  previousDraft,
+                ),
               },
             ]
           : content;

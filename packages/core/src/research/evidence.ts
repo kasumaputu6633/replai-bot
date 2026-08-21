@@ -6,7 +6,6 @@ export const MAX_EVIDENCE_ENTRIES = 24;
 export const MAX_EVIDENCE_URL_LENGTH = 2_048;
 export const MAX_EVIDENCE_TITLE_LENGTH = 300;
 export const MAX_EVIDENCE_EXCERPT_LENGTH = 1_500;
-export const MAX_FALLBACK_SOURCES = 3;
 export const MAX_DISPLAYED_SOURCES = 8;
 
 const CITATION_GROUP_PATTERN = /\[([\d\s,;–—-]+)\]/gu;
@@ -281,7 +280,7 @@ export function appendTrustedSources(
 
   let selected: EvidenceCatalogEntry[];
   if (citedIds.size === 0) {
-    selected = catalog.slice(0, MAX_FALLBACK_SOURCES);
+    selected = [];
   } else {
     const citedEntries = catalog.filter((entry) => citedIds.has(entry.id));
     const selectedIds = new Set<number>();

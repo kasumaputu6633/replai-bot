@@ -37,7 +37,6 @@ export {
   MAX_EVIDENCE_EXCERPT_LENGTH,
   MAX_EVIDENCE_TITLE_LENGTH,
   MAX_EVIDENCE_URL_LENGTH,
-  MAX_FALLBACK_SOURCES,
 } from './research/evidence.js';
 export type {
   EvidenceCatalogEntry,
@@ -45,6 +44,12 @@ export type {
   TargetedWebSearchResult,
   TrustedEvidenceInput,
 } from './research/evidence.js';
+export {
+  buildResearchPlan,
+  type ResearchInteraction,
+  type ResearchPlan,
+  type ResearchSearchStrategy,
+} from './research/intent.js';
 export {
   ensureResearchModeStructure,
   hasComparisonTargetCoverage,
