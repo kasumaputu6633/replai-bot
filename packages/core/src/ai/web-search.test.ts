@@ -126,6 +126,19 @@ describe('hasSearchableWebContext', () => {
       }),
     ).toBe(false);
   });
+
+  it('treats playful relationship speculation as source-free banter', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'tapi mereka saling suka ga sih? coba lihat ekspresinya lebih dalam',
+        source: {
+          ...input.source,
+          text: 'tapi mereka saling suka ga sih? coba lihat ekspresinya lebih dalam',
+          images: [{ url: 'https://cdn.discordapp.com/attachment.png', contentType: 'image/png' }],
+        },
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('NineRouterWebSearchClient', () => {

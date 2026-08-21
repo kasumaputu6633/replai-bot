@@ -10,6 +10,8 @@ const CASUAL_GREETING_OR_THANKS =
   /^(?:(?:halo|hai|hey|hi|yo|pagi|siang|malam|apa kabar|makasih|terima kasih|thanks?|thx|wkwk|haha)[\s!,.?]*)+$/iu;
 const CASUAL_BANTER =
   /\b(?:wkwk+|haha+|hehe+|lol|lmao|bercanda|jokes?|lucu|ngakak|receh|roast)\b/iu;
+const RELATIONSHIP_BANTER =
+  /\b(?:saling\s+suka|naksir|gebetan|jadian|pacaran|chemistry|bucin|cinlok|shipping|di-?ship|crush)\b/iu;
 const CASUAL_SPECULATION =
   /\b(?:menurut(?:\s+(?:kamu|lu|loe|lo))?|menurutmu|kira[- ]?kira|kayaknya|bakal|tebak(?:an)?|guess)\b/iu;
 const PRIVATE_DISCORD_CONTEXT =
@@ -70,6 +72,7 @@ export function isCasualConversationInput(input: ResearchInput): boolean {
     resolveResearchMode(input) === 'answer' &&
     (CASUAL_GREETING_OR_THANKS.test(input.question.trim()) ||
       CASUAL_BANTER.test(input.question) ||
+      RELATIONSHIP_BANTER.test(input.question) ||
       (CASUAL_SPECULATION.test(input.question) && PRIVATE_DISCORD_CONTEXT.test(input.question)))
   );
 }

@@ -130,6 +130,8 @@ describe('REPLAI_SYSTEM_PROMPT', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('Mild teasing, playful exaggeration, or subtle sarcasm');
     expect(REPLAI_SYSTEM_PROMPT).toContain('Do not pretend to know private intentions');
     expect(REPLAI_SYSTEM_PROMPT).toContain('drop the playful tone');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('join the bit instead of analyzing it like a psychologist');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('aku vote iya');
   });
 
   it('keeps verification explicit and comparison prose natural', () => {
