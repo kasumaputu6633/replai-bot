@@ -28,6 +28,7 @@ import {
 import {
   buildWebSearchQuery,
   hasSearchableWebContext,
+  isCasualConversationInput,
   NineRouterWebSearchClient,
 } from './web-search.js';
 
@@ -67,6 +68,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
 
     try {
       const mode = resolveResearchMode(validatedInput);
+      const isCasualConversation = isCasualConversationInput(validatedInput);
       const sources = [
         validatedInput.source,
         ...(validatedInput.comparisonSources ?? []),
@@ -82,11 +84,13 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
               promise: this.#webSearch!.search(buildWebSearchQuery(searchInput)),
             }))
         : [];
-      const fetchUrls = [
-        ...new Set(
-          sources.flatMap((source) => source.urls).filter(isAllowedWebFetchUrl),
-        ),
-      ].slice(0, MAX_WEB_FETCH_URLS);
+      const fetchUrls = isCasualConversation
+        ? []
+        : [
+            ...new Set(
+              sources.flatMap((source) => source.urls).filter(isAllowedWebFetchUrl),
+            ),
+          ].slice(0, MAX_WEB_FETCH_URLS);
       const fetchTasks = this.#webFetch
         ? fetchUrls.map((url) => this.#webFetch!.fetch(url))
         : [];
@@ -107,7 +111,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
         result.status === 'fulfilled' ? [result.value] : [],
       );
       const evidenceCatalog = buildTrustedEvidenceCatalog({
-        sources,
+        sources: isCasualConversation ? [] : sources,
         targetedSearchResults: targetedWebSearchResults,
         fetchedPages: webFetchResults,
       });
@@ -180,7 +184,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
           return {
             content:
               guarded === evidenced && !isResearchRefusal(guarded)
-                ? appendTrustedSources(guarded, evidenceCatalog)
+                ? appendTrustedSources(guarded, isCasualConversation ? [] : evidenceCatalog)
                 : guarded,
           };
         }

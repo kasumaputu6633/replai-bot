@@ -169,4 +169,13 @@ describe('appendTrustedSources', () => {
       "I can't help find that content.",
     );
   });
+
+  it('removes model-generated sources when casual output has no evidence catalog', () => {
+    expect(
+      appendTrustedSources(
+        'Waduh, aku belum pegang bocoran dramanya.\n\nSources:\n- https://example.com/random',
+        [],
+      ),
+    ).toBe('Waduh, aku belum pegang bocoran dramanya.');
+  });
 });

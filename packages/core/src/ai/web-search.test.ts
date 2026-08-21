@@ -89,6 +89,43 @@ describe('hasSearchableWebContext', () => {
       }),
     ).toBe(false);
   });
+
+  it('skips irrelevant search for casual private Discord speculation', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'menurut kamu Ikik bakal memukul siapa didiscord ini?',
+        source: {
+          ...input.source,
+          text: 'menurut kamu Ikik bakal memukul siapa didiscord ini?',
+          urls: ['https://example.com/unrelated-link'],
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('still searches direct questions that need current factual data', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'besok Denpasar Barat bakal cerah nggak?',
+        source: {
+          ...input.source,
+          text: 'besok Denpasar Barat bakal cerah nggak?',
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it('skips search and sources for explicit joke or roast prompts', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'roast aku dikit dong, wkwk',
+        source: {
+          ...input.source,
+          text: 'roast aku dikit dong, wkwk',
+        },
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('NineRouterWebSearchClient', () => {

@@ -6,6 +6,14 @@ import type { WebSearchResult } from './types.js';
 
 const MAX_SEARCH_QUERY_LENGTH = 500;
 const SEARCH_TIMEOUT_MS = 20_000;
+const CASUAL_GREETING_OR_THANKS =
+  /^(?:(?:halo|hai|hey|hi|yo|pagi|siang|malam|apa kabar|makasih|terima kasih|thanks?|thx|wkwk|haha)[\s!,.?]*)+$/iu;
+const CASUAL_BANTER =
+  /\b(?:wkwk+|haha+|hehe+|lol|lmao|bercanda|jokes?|lucu|ngakak|receh|roast)\b/iu;
+const CASUAL_SPECULATION =
+  /\b(?:menurut(?:\s+(?:kamu|lu|loe|lo))?|menurutmu|kira[- ]?kira|kayaknya|bakal|tebak(?:an)?|guess)\b/iu;
+const PRIVATE_DISCORD_CONTEXT =
+  /(?:\b(?:discord|server\s+ini|di\s+(?:server|sini)|member|anggota|obrolan|chat|dia|mereka|orang\s+ini)\b|\bdi\s*discord\b)/iu;
 
 const searchResponseSchema = z.object({
   results: z.array(
@@ -57,7 +65,20 @@ export function buildWebSearchQuery(input: ResearchInput, now = new Date()): str
   return context.slice(0, MAX_SEARCH_QUERY_LENGTH);
 }
 
+export function isCasualConversationInput(input: ResearchInput): boolean {
+  return (
+    resolveResearchMode(input) === 'answer' &&
+    (CASUAL_GREETING_OR_THANKS.test(input.question.trim()) ||
+      CASUAL_BANTER.test(input.question) ||
+      (CASUAL_SPECULATION.test(input.question) && PRIVATE_DISCORD_CONTEXT.test(input.question)))
+  );
+}
+
 export function hasSearchableWebContext(input: ResearchInput): boolean {
+  if (isCasualConversationInput(input)) {
+    return false;
+  }
+
   return Boolean(
     input.source.text?.trim() ||
       input.source.urls.length > 0 ||

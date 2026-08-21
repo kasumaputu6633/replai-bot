@@ -2,113 +2,213 @@
 
 **Reply. Ask. Verify.**
 
-Replai is a Discord research assistant for factual questions, contextual analysis, claim verification, and source comparison. Users can ask a direct question, include links or media in the same message, or reply to existing Discord content. Replai analyzes relevant text, links, attachments, embeds, images, reply chains, and thread context before responding.
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24.17-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-11.22-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+
+Replai is a Discord-native research assistant that helps communities investigate claims without leaving the conversation. Ask a factual question directly, attach a link or image, reply to an existing message, or continue naturally inside a thread.
+
+Replai combines Discord context, bounded web research, multimodal input, and deterministic safety controls to produce concise answers backed by a clean list of sources.
+
+## Highlights
+
+- **Context-aware research:** understands direct questions, replies, reply chains, embeds, attachments, images, and recent thread messages.
+- **Live web evidence:** searches current sources and extracts supported social-media pages through 9Router.
+- **Claim verification:** recognizes fact-checking requests and separates verdict, evidence, confidence, and limitations.
+- **Source comparison:** researches named products or claims independently before explaining practical trade-offs.
+- **Natural follow-ups:** keeps a small, expiring conversation context inside Discord threads.
+- **Multimodal analysis:** passes Discord-hosted images to compatible vision models.
+- **Clean citations:** validates evidence markers internally, then presents trusted source links without citation numbers in the prose.
+- **Defense in depth:** applies deterministic input guards, untrusted-data boundaries, output leakage checks, SSRF controls, and refusal-safe formatting.
+
+## Example
 
 ```text
-Alice:
-"NVIDIA is ending consumer GPU production."
-[screenshot]
+Nanda:
+@Replai what makes https://jcode.sh different from OpenCode and Kilo Code?
 
-Bob (replying to Alice):
-@Replai is this actually true?
+Replai:
+JCode is the lightweight terminal-first option, while OpenCode emphasizes...
 
-Replai (replying to Bob):
-...
+Sources
+- JCode documentation
+- OpenCode documentation
+- Kilo Code documentation
 ```
+
+Replai also supports direct questions:
+
+```text
+@Replai will West Denpasar be sunny tomorrow?
+```
+
+And contextual questions by replying to a Discord message:
+
+```text
+@Replai is this claim accurate?
+@Replai find the original source
+@Replai explain this screenshot
+```
+
+## How It Works
+
+1. The Discord bot detects a user or managed bot-role mention.
+2. It resolves the direct message, referenced reply chain, recent thread context, and optional thread memory.
+3. Discord content is normalized into bounded text, URL, embed, attachment, and image data.
+4. Deterministic guards reject unsafe or out-of-scope requests before any provider or search call.
+5. Replai searches each research target independently and fetches supported social links when relevant.
+6. The model receives the question and evidence as untrusted structured data.
+7. Output guards validate response structure, target coverage, evidence use, and prompt leakage.
+8. Internal citation markers are removed and a compact source list is appended before delivery.
 
 ## Architecture
 
-This repository is a pnpm/Turborepo modular monolith with multiple entrypoints:
+Replai is a pnpm/Turborepo modular monolith with two runtime entrypoints:
 
 ```text
 Discord Bot ----\
                  +---- @replai/core
 Fastify API ----/
+                       |
+                       +---- @replai/config
 ```
 
-- `apps/bot`: discord.js gateway client, Discord normalization, bounded thread memory, and response delivery.
-- `apps/api`: Fastify process exposing liveness and readiness endpoints.
-- `packages/core`: provider-independent research types, context limits, prompts, and the OpenAI-compatible provider.
-- `packages/config`: centralized Zod environment parsing and Pino logger creation.
+| Workspace | Responsibility |
+| --- | --- |
+| `apps/bot` | Discord gateway client, message normalization, thread context, memory, and response delivery |
+| `apps/api` | Fastify liveness and readiness endpoints |
+| `packages/core` | Research contracts, provider integration, search/fetch clients, prompts, evidence, and guards |
+| `packages/config` | Environment validation and redacted structured logging |
 
-The bot imports `@replai/core` directly. It does not call the API over HTTP.
+The bot imports `@replai/core` directly. The Fastify API is an independent operational endpoint, not an internal proxy for bot requests.
 
 ## Requirements
 
 - Node.js 24.17 or newer
 - pnpm 11.22
 - A Discord application and bot token
-- An OpenAI-compatible endpoint and a model capable of processing image URL content when image analysis is needed
+- An OpenAI-compatible chat-completions endpoint
+- A model that supports `image_url` content when image analysis is required
+- 9Router-compatible `/search` and `/web/fetch` routes for the included live-research integrations
 
-## Setup
+## Quick Start
+
+Clone the repository and install dependencies:
 
 ```bash
+git clone https://github.com/kasumaputu6633/replai-bot.git
+cd replai-bot
+corepack enable
 pnpm install
+```
+
+Create the local environment file:
+
+```bash
 cp .env.example .env
+```
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Fill in the required values, then start both runtimes:
+
+```bash
 pnpm dev
 ```
 
-On PowerShell, use `Copy-Item .env.example .env` instead of `cp` if no Unix-compatible shell is installed.
-
-Run one entrypoint only:
+Run one runtime only:
 
 ```bash
 pnpm --filter @replai/bot dev
 pnpm --filter @replai/api dev
 ```
 
-The API is available at `http://localhost:3000` by default:
+The API listens on `http://localhost:3000` by default:
 
-- `GET /health`: process liveness
-- `GET /ready`: application readiness
+- `GET /health` reports process liveness.
+- `GET /ready` reports application readiness.
 
-## Environment
+## Environment Variables
 
-| Variable | Required by | Description |
-| --- | --- | --- |
-| `NODE_ENV` | Both | `development`, `test`, or `production` |
-| `LOG_LEVEL` | Both | Pino level such as `info`, `debug`, or `warn` |
-| `DISCORD_TOKEN` | Bot | Discord bot token |
-| `DISCORD_CLIENT_ID` | Bot | Discord application/client ID |
-| `AI_BASE_URL` | Bot | OpenAI-compatible API base URL, commonly ending in `/v1` |
-| `AI_API_KEY` | Bot | Provider API key |
-| `AI_MODEL` | Bot | Provider-specific model identifier |
-| `AI_WEB_SEARCH_MODEL` | Bot | 9Router web-search provider, defaults to `exa` |
-| `AI_WEB_SEARCH_MAX_RESULTS` | Bot | Search evidence count, defaults to `5` and is capped at `10` |
-| `AI_WEB_FETCH_MODEL` | Bot | 9Router social-page extraction provider, defaults to `exa` |
-| `API_HOST` | API | Listen address, defaults to `0.0.0.0` |
-| `API_PORT` | API | Listen port, defaults to `3000` |
+| Variable | Required by | Default | Description |
+| --- | --- | --- | --- |
+| `NODE_ENV` | Both | `development` | Runtime environment: `development`, `test`, or `production` |
+| `LOG_LEVEL` | Both | `info` | Pino log level |
+| `DISCORD_TOKEN` | Bot | Required | Discord bot token |
+| `DISCORD_CLIENT_ID` | Bot | Required | Discord application ID |
+| `AI_BASE_URL` | Bot | Required | OpenAI-compatible API base URL, usually ending in `/v1` |
+| `AI_API_KEY` | Bot | Required | AI provider API key |
+| `AI_MODEL` | Bot | Required | Chat model identifier |
+| `AI_WEB_SEARCH_MODEL` | Bot | `exa` | 9Router search provider |
+| `AI_WEB_SEARCH_MAX_RESULTS` | Bot | `5` | Results per search, limited to `1-10` |
+| `AI_WEB_FETCH_MODEL` | Bot | `exa` | 9Router social-page extraction provider |
+| `API_HOST` | API | `0.0.0.0` | Fastify listen address |
+| `API_PORT` | API | `3000` | Fastify listen port |
 
-Configuration is validated at startup. Secret values are never included in validation errors and common secret-shaped log fields are redacted.
+Environment values are validated at startup. Secret-shaped fields are redacted from logs, and `.env` files are excluded from Git.
 
-## Discord Developer Portal
+## Discord Setup
 
-1. Create an application at the [Discord Developer Portal](https://discord.com/developers/applications).
-2. Open **Bot**, create the bot user, and copy/reset its token into `DISCORD_TOKEN`.
-3. Under **Privileged Gateway Intents**, enable **Message Content Intent**. Replai needs the referenced message's `content`, `embeds`, and `attachments`; these fields can otherwise be empty.
-4. Under **OAuth2 > URL Generator**, select the `bot` scope.
-5. Grant only **View Channels**, **Send Messages**, and **Read Message History**. Read Message History is required to resolve the message being replied to.
-6. Open the generated URL and install the bot in the target server.
-7. Put the application's ID in `DISCORD_CLIENT_ID`.
+1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Open **Bot**, create the bot user, and copy its token into `DISCORD_TOKEN`.
+3. Enable **Message Content Intent** under **Privileged Gateway Intents**.
+4. Open **OAuth2 > URL Generator** and select the `bot` scope.
+5. Grant **View Channels**, **Send Messages**, **Send Messages in Threads**, and **Read Message History**.
+6. Install the bot in your server and place the application ID in `DISCORD_CLIENT_ID`.
 
-The runtime requests only `Guilds`, `GuildMessages`, and `MessageContent`. Discord currently requires privileged-intent review after an app reaches its applicable user threshold; consult the Developer Portal when scaling beyond development use.
+The runtime requests only `Guilds`, `GuildMessages`, and `MessageContent` gateway intents.
 
-## Interaction
+## Interaction Model
 
-Mention the bot with a direct factual question, include evidence in the same message, or reply to existing content:
+| Input | Behavior |
+| --- | --- |
+| Direct factual question | Uses the question itself as searchable context |
+| Mention plus URL, embed, image, or attachment | Analyzes evidence from the same message |
+| Reply plus mention | Resolves the referenced message and its reply chain |
+| Follow-up inside a thread | Reuses bounded, expiring thread context |
+| Verification wording | Produces an explicit verdict with evidence and uncertainty |
+| Comparison wording | Searches each named target separately and explains practical trade-offs |
 
-```text
-@Replai is this actually true?
-@Replai find the original source
-@Replai explain this screenshot
-@Replai is this misleading?
-@Replai will West Denpasar be sunny tomorrow?
-@Replai compare https://example.com with OpenCode and Kilo Code
-```
+A mention without a question or evidence receives a short usage instruction and does not invoke the AI provider.
 
-Reply chains are resolved up to six messages. Threads can include up to eight recent messages and keep a bounded in-memory follow-up context for 15 minutes. A mention with no question or evidence receives a short instruction and does not invoke the AI provider.
+## Context And Research Limits
 
-## Quality Commands
+Limits are deliberately conservative to control cost, latency, prompt size, and SSRF exposure.
+
+| Resource | Limit |
+| --- | --- |
+| Reply-chain depth | 6 messages |
+| Recent thread messages | 8 messages |
+| Combined Discord context | 10 messages / 12,000 characters |
+| Thread memory | 8 turns / 12,000 characters / 15-minute TTL |
+| In-memory conversations | 500 |
+| Comparison targets | Primary target plus up to 4 additional targets |
+| Direct social fetches | 2 URLs per request |
+| Extracted social-page content | 6,000 characters per page |
+| Web-fetch timeout | 20 seconds |
+| Displayed sources | 8 |
+
+Direct extraction is restricted to Instagram, YouTube, TikTok, X/Twitter, Reddit, Facebook, and Threads. Other hosts remain search-only.
+
+## Security Model
+
+- User questions, Discord content, fetched pages, search results, and prior assistant messages are always treated as untrusted data.
+- Input guards run in both the Discord handler and `@replai/core`, preventing future entrypoints from bypassing them.
+- Prompt injection, hidden-instruction extraction, jailbreaks, unrelated generation, and explicit sexual-content discovery are blocked before provider calls.
+- Arbitrary URL fetching is not available; direct fetches use an explicit social-domain allowlist, standard ports, bounded output, and strict timeouts.
+- Evidence URLs are canonicalized and deduplicated before display.
+- Generated mentions and Discord link previews are suppressed.
+- Output is checked for internal-prompt leakage and unsafe refusal formatting.
+- Refusal responses never receive citations or source links.
+- Blocked request text is not logged; only the guard reason and Discord metadata are recorded.
+
+These controls reduce risk but do not make model output infallible. Review important decisions against the linked primary sources.
+
+## Development
 
 ```bash
 pnpm lint
@@ -117,7 +217,23 @@ pnpm test
 pnpm build
 ```
 
-Tests use plain adapter data and Fastify injection; they do not require Discord or AI credentials.
+Tests use structural Discord mocks and Fastify injection. They do not require live Discord or AI credentials.
+
+Project layout:
+
+```text
+replai-bot/
+|-- apps/
+|   |-- api/
+|   `-- bot/
+|-- packages/
+|   |-- config/
+|   `-- core/
+|-- Dockerfile
+|-- docker-compose.yml
+|-- pnpm-workspace.yaml
+`-- turbo.json
+```
 
 ## Production
 
@@ -127,32 +243,24 @@ Build locally:
 pnpm build
 ```
 
-Run both non-root Docker targets:
+Build and run both non-root Docker targets:
 
 ```bash
 docker compose up -d --build
 ```
 
-The Docker build installs the frozen lockfile once, builds the workspace, and deploys a pruned production package for each runtime target.
+The Docker build installs the frozen lockfile, builds the workspace, and deploys pruned production packages for the bot and API.
 
-## Security Guardrails
+## Current Boundaries
 
-- Discord content, images, embeds, attachment metadata, and search results are serialized as untrusted JSON evidence rather than instructions.
-- A deterministic guard blocks common prompt-injection, secret-extraction, jailbreak, unrelated generation, and explicit sexual-content discovery requests before the AI provider or web search is called.
-- The same guard runs inside `@replai/core`, so future entrypoints cannot bypass it.
-- The system prompt restricts Replai to contextual analysis and forbids exposing prompts, credentials, configuration, internal errors, or tool instructions.
-- Provider output is checked for recognizable internal-prompt leakage before delivery.
-- Refusal responses never receive citations or a source list.
-- Blocked request text is not written to logs; only the guard reason and Discord metadata are recorded.
-- URL content extraction is limited to two URLs on an explicit social-domain allowlist, standard HTTP(S) ports, 6,000 characters per page, and a 20-second timeout.
+- Thread memory is process-local and is lost on restart.
+- There is no database, queue, persistent user profile, guild settings UI, or usage dashboard.
+- The API currently exposes operational health endpoints only.
+- Search and social extraction depend on the configured 9Router routes.
+- Attachment MIME types and filename extensions are treated as hints, not proof of content type.
+- Image analysis depends on the configured model and its ability to reach Discord CDN URLs.
+- Replies may be split into multiple Discord messages when they exceed platform limits.
 
-## MVP Boundaries
+## License
 
-- No database, queues, persistent conversation history, guild settings, or usage tracking. Thread memory is process-local, bounded, and expires after 15 minutes.
-- Live research uses 9Router's bounded `/v1/search` endpoint and passes result titles, URLs, dates, and snippets to the AI model.
-- Social links from Instagram, YouTube, TikTok, X/Twitter, Reddit, Facebook, and Threads can be extracted through bounded `/v1/web/fetch` calls. Arbitrary hosts remain search-only to avoid a generic SSRF surface.
-- Attachment MIME types and filename extensions are hints only.
-- Image URLs are passed directly as multimodal `image_url` parts; the configured provider must support that OpenAI-compatible format and be able to reach Discord CDN URLs.
-- Search availability depends on the configured 9Router web-search route. The default is `exa`.
-- Evidence markers are validated internally and removed before delivery; users receive a compact list of trusted source links instead of inline citation numbers.
-- Replies are split below Discord's message limit and delivered in order; the first chunk replies to the user's query message.
+Licensed under the [Apache License 2.0](LICENSE). You may use, modify, and distribute Replai, including commercially, subject to the license's attribution, notice, and change-documentation requirements.

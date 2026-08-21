@@ -125,6 +125,13 @@ describe('REPLAI_SYSTEM_PROMPT', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('Match detail to complexity');
   });
 
+  it('defines a playful but bounded Discord personality', () => {
+    expect(REPLAI_SYSTEM_PROMPT).toContain('quick-witted Discord regular');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Mild teasing, playful exaggeration, or subtle sarcasm');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Do not pretend to know private intentions');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('drop the playful tone');
+  });
+
   it('keeps verification explicit and comparison prose natural', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('"Verdict:"');
     expect(REPLAI_SYSTEM_PROMPT).toContain('"Evidence:"');
