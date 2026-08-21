@@ -45,6 +45,7 @@ CMD ["node", "dist/index.js"]
 FROM runtime AS railway
 LABEL org.opencontainers.image.source="https://github.com/kasumaputu6633/replai-bot"
 LABEL org.opencontainers.image.title="Replai"
+LABEL org.opencontainers.image.description="Discord-native contextual research assistant"
 COPY --from=build --chown=node:node /prod/bot ./bot
 COPY --from=build --chown=node:node /prod/api ./api
 EXPOSE 3000
