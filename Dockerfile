@@ -39,3 +39,11 @@ FROM runtime AS api
 COPY --from=build --chown=node:node /prod/api ./
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
+
+# Default PaaS image. Railway builds the final stage and selects the process
+# with a per-service start command, while Compose still targets bot/api above.
+FROM runtime AS railway
+COPY --from=build --chown=node:node /prod/bot ./bot
+COPY --from=build --chown=node:node /prod/api ./api
+EXPOSE 3000
+CMD ["node", "api/dist/index.js"]
