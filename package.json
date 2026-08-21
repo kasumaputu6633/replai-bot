@@ -1,0 +1,32 @@
+{
+  "name": "replai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Replai - Reply. Ask. Verify.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24.17.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@replai/bot --filter=@replai/api",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "test": "turbo run test",
+    "clean": "turbo run clean && node -e \"require('node:fs').rmSync('.turbo',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.12",
+    "turbo": "^2.10.11",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.11"
+  }
+}

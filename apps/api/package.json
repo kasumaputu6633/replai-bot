@@ -1,0 +1,23 @@
+{
+  "name": "@replai/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.17.0"
+  },
+  "scripts": {
+    "predev": "pnpm --filter @replai/config build",
+    "dev": "node --env-file-if-exists=../../.env --import tsx --watch --watch-preserve-output src/index.ts",
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --clean",
+    "start": "node --env-file-if-exists=../../.env dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@replai/config": "workspace:*",
+    "fastify": "^5.12.1",
+    "pino": "^10.3.1"
+  }
+}

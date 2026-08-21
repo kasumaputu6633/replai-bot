@@ -1,0 +1,59 @@
+import { createLogger, loadBotConfig } from '@replai/config';
+import { OpenAICompatibleResearchProvider } from '@replai/core';
+import { Events } from 'discord.js';
+import { createDiscordClient } from './client.js';
+import { registerMessageCreateHandler } from './events/message-create.js';
+import { ThreadMemoryStore } from './memory/thread-memory.js';
+
+const config = loadBotConfig();
+const logger = createLogger('replai-bot', config.logLevel);
+const client = createDiscordClient();
+const threadMemory = new ThreadMemoryStore();
+const provider = new OpenAICompatibleResearchProvider({
+  apiKey: config.ai.apiKey,
+  baseURL: config.ai.baseUrl,
+  model: config.ai.model,
+  webSearchModel: config.ai.webSearchModel,
+  webSearchMaxResults: config.ai.webSearchMaxResults,
+  webFetchModel: config.ai.webFetchModel,
+});
+
+registerMessageCreateHandler({
+  client,
+  configuredClientId: config.discordClientId,
+  provider,
+  logger,
+  model: config.ai.model,
+  threadMemory,
+});
+
+let shutdownPromise: Promise<void> | undefined;
+
+function shutdown(signal: string): Promise<void> {
+  shutdownPromise ??= Promise.resolve().then(() => {
+    logger.info({ signal }, 'Shutting down Discord bot');
+    client.destroy();
+  });
+  return shutdownPromise;
+}
+
+process.once('SIGINT', () => void shutdown('SIGINT'));
+process.once('SIGTERM', () => void shutdown('SIGTERM'));
+
+client.once(Events.ClientReady, (readyClient) => {
+  if (readyClient.user.id !== config.discordClientId) {
+    logger.warn(
+      { configuredClientId: config.discordClientId, actualClientId: readyClient.user.id },
+      'DISCORD_CLIENT_ID does not match the authenticated bot',
+    );
+  }
+  logger.info({ userId: readyClient.user.id }, 'Discord bot connected');
+});
+
+try {
+  await client.login(config.discordToken);
+} catch (error) {
+  logger.fatal({ err: error }, 'Failed to connect Discord bot');
+  process.exitCode = 1;
+  await shutdown('startup-error');
+}
