@@ -136,11 +136,6 @@ export async function handleMessageCreate(
       ? { ...normalizedDirectSource, text: question }
       : null;
 
-  if (!message.reference?.messageId && !existingMemory && !directSource) {
-    await replySafely(message, MISSING_REFERENCE_RESPONSE, dependencies.logger);
-    return;
-  }
-
   const guardDecision = assessResearchQuestion(question);
   if (!guardDecision.allowed) {
     dependencies.logger.warn(
@@ -157,12 +152,11 @@ export async function handleMessageCreate(
     return;
   }
 
-  const resolved = message.reference?.messageId
-    ? await resolveDiscordContext(message, {
-        botUserId,
-        queryingUserId: message.author.id,
-      })
-    : null;
+  const resolved = await resolveDiscordContext(message, {
+    botUserId,
+    queryingUserId: message.author.id,
+  });
+
   if (message.reference?.messageId && !resolved) {
     await replySafely(message, INACCESSIBLE_REFERENCE_RESPONSE, dependencies.logger);
     return;
@@ -174,9 +168,13 @@ export async function handleMessageCreate(
     (!resolvedSource || isStoredConversationSource(resolvedSource.messageId, existingMemory))
       ? existingMemory
       : null;
-  const source = memory?.source ?? resolvedSource;
+  const source =
+    memory?.source ??
+    resolvedSource ??
+    (normalizedDirectSource ? { ...normalizedDirectSource, text: question } : null);
+
   if (!source) {
-    await replySafely(message, INACCESSIBLE_REFERENCE_RESPONSE, dependencies.logger);
+    await replySafely(message, MISSING_REFERENCE_RESPONSE, dependencies.logger);
     return;
   }
   const input = buildResearchInput(question, source, resolved?.turns ?? [], memory, message);

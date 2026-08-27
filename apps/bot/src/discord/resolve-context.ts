@@ -105,12 +105,11 @@ async function resolveReplyChain(query: Message): Promise<Message[]> {
   return newestFirst.reverse();
 }
 
-async function fetchThreadHistory(query: Message): Promise<Message[]> {
-  if (!query.channel.isThread()) {
-    return [];
-  }
-
+async function fetchRecentChannelHistory(query: Message): Promise<Message[]> {
   try {
+    if (!('messages' in query.channel) || typeof query.channel.messages?.fetch !== 'function') {
+      return [];
+    }
     const messages = await query.channel.messages.fetch({
       before: query.id,
       limit: MAX_THREAD_CONTEXT_MESSAGES,
@@ -123,9 +122,9 @@ async function fetchThreadHistory(query: Message): Promise<Message[]> {
 }
 
 /**
- * Resolves the query's same-channel evidence chain and bounded thread context.
- * A missing immediate reference returns null; inaccessible later ancestors and
- * thread-history failures return the context resolved so far.
+ * Resolves the query's same-channel evidence chain and bounded channel/thread context.
+ * When an immediate reference is present, it resolves the reply chain.
+ * Inaccessible ancestors or fetch failures fall back gracefully to the resolved context.
  */
 export async function resolveDiscordContext(
   query: Message,
@@ -133,17 +132,24 @@ export async function resolveDiscordContext(
 ): Promise<ResolvedDiscordContext | null> {
   const replyChain = await resolveReplyChain(query);
   const source = replyChain[0];
-  if (!source) {
-    return null;
-  }
 
   const chainIds = new Set(replyChain.map((message) => message.id));
   const availableHistorySlots = MAX_CONTEXT_MESSAGES - replyChain.length;
-  const history = (await fetchThreadHistory(query))
+  const history = (await fetchRecentChannelHistory(query))
     .filter((message) => message.id !== query.id && !chainIds.has(message.id))
     .sort(compareMessages)
     .slice(-availableHistorySlots);
   const contextMessages = [...replyChain, ...history].sort(compareMessages);
+
+  if (!source) {
+    if (contextMessages.length === 0) {
+      return null;
+    }
+    return {
+      source: contextMessages[contextMessages.length - 1]!,
+      turns: compactMessages(contextMessages, options),
+    };
+  }
 
   return {
     source,

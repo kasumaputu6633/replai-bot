@@ -1,4 +1,4 @@
-export const DEFAULT_QUESTION = 'Analyze this message and explain what can be verified.';
+export const DEFAULT_QUESTION = 'Apa yang lagi diobrolin? Tanggapi santai sesuai konteks chat.';
 
 export function parseQuestion(
   content: string,

@@ -183,18 +183,13 @@ describe('handleMessageCreate', () => {
     });
   });
 
-  it('still requires a reference outside threads', async () => {
+  it('replies even when only tagged without explicit reference outside threads by using channel context', async () => {
     const deps = dependencies();
     const query = fakeMessage({ id: '1', content: '<@bot>' });
 
     await handleMessageCreate(query, deps);
 
-    expect(deps.providerResearch).not.toHaveBeenCalled();
-    expect(query.reply).toHaveBeenCalledWith({
-      content: 'Reply to a message and mention me with your question.',
-      allowedMentions: { parse: [], repliedUser: false },
-      flags: MessageFlags.SuppressEmbeds,
-    });
+    expect(deps.providerResearch).toHaveBeenCalledOnce();
   });
 
   it('accepts a direct factual question and uses its text as searchable context', async () => {

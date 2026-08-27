@@ -21,7 +21,9 @@ describe('buildResearchPlan', () => {
     ['kelihatan banget blm mandi nya kan', { image: true }],
     ['menurutmu apakah dia sedang jatuh cinta gak dengan salah satu orang didiscord ini?', {}],
     ['ada mitos jika kamu panggil dia tiga kali, ia akan datang ke kamar kamu', {}],
-  ])('keeps screenshot-derived banter source-free: %s', (question, options) => {
+    ['coba sindir dikit politik hari ini wkwk', {}],
+    ['sarkasin dikit kelakuan dia bro', {}],
+  ])('keeps screenshot-derived banter and jokes source-free: %s', (question, options) => {
     expect(buildResearchPlan(input(question, options))).toEqual({
       mode: 'answer',
       interaction: 'casual',

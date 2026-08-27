@@ -17,7 +17,7 @@ const VERIFICATION_QUESTION =
 const CASUAL_GREETING_OR_THANKS =
   /^(?:(?:halo|hai|hey|hi|yo|pagi|siang|malam|apa kabar|makasih|terima kasih|thanks?|thx|wkwk|haha)[\s!,.?]*)+$/iu;
 const CASUAL_BANTER =
-  /\b(?:wkwk+|haha+|hehe+|lol|lmao|bercanda|jokes?|lucu|ngakak|receh|roast|aura|mager|salting|muka bantal|baru bangun|belum mandi|blm mandi)\b/iu;
+  /\b(?:wkwk+|haha+|hehe+|lol|lmao|bercanda|jokes?|lucu|ngakak|receh|roast|aura|mager|salting|muka bantal|baru bangun|belum mandi|blm mandi|sarkas(?:tik)?|sarkasin|dark jokes?|politik|satir|sindir(?:an)?|lawak|candaan|gokil|kocak)\b/iu;
 const RELATIONSHIP_BANTER =
   /\b(?:saling\s+suka|jatuh\s+cinta|naksir|gebetan|jadian|pacaran|chemistry|bucin|cinlok|shipping|di-?ship|crush)\b/iu;
 const CASUAL_SPECULATION =

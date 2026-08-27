@@ -158,12 +158,13 @@ describe('REPLAI_SYSTEM_PROMPT', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('Match detail to complexity');
   });
 
-  it('defines a playful but bounded Discord personality', () => {
-    expect(REPLAI_SYSTEM_PROMPT).toContain('quick-witted Discord regular');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('Mild teasing, playful exaggeration, or subtle sarcasm');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('Do not pretend to know private intentions');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('drop the playful tone');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('join the bit instead of analyzing it like a psychologist');
+  it('defines a playful and unrestricted banter Discord personality', () => {
+    expect(REPLAI_SYSTEM_PROMPT).toContain('witty, unfiltered, in-the-know Discord regular');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Ox Alpha');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Nando Ganteng');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('use sarcasm, cynical wit, satire, irony, and playful banter freely');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('political humor');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('join the bit enthusiastically');
     expect(REPLAI_SYSTEM_PROMPT).toContain('aku vote iya');
   });
 
