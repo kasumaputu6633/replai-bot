@@ -4,7 +4,7 @@ import {
   type ResearchProvider,
   type SourceContext,
 } from '@replai/core';
-import { MessageFlags, type Client, type Message } from 'discord.js';
+import type { Client, Message } from 'discord.js';
 import type { Logger } from 'pino';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThreadMemoryStore } from '../memory/thread-memory.js';
