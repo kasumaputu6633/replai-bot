@@ -52,7 +52,11 @@ function fakeMessage(options: FakeMessageOptions): FakeMessage {
     id: options.id,
     channelId: 'channel-1',
     channel,
-    author: { id: options.authorId ?? 'participant' },
+    author: {
+      id: options.authorId ?? 'participant',
+      displayAvatarURL: () =>
+        `https://cdn.discordapp.com/${options.authorId ?? 'participant'}.png`,
+    },
     content: options.content ?? options.id,
     createdTimestamp: options.createdTimestamp ?? 0,
     reference: referenced
@@ -99,6 +103,7 @@ describe('resolveDiscordContext', () => {
         messageId: '1',
         authorId: 'participant',
         authorName: 'participant',
+        authorAvatarUrl: 'https://cdn.discordapp.com/participant.png',
         role: 'participant',
         text: 'source',
         createdAt: new Date(1).toISOString(),
@@ -107,6 +112,7 @@ describe('resolveDiscordContext', () => {
         messageId: '2',
         authorId: 'bot',
         authorName: 'bot',
+        authorAvatarUrl: 'https://cdn.discordapp.com/bot.png',
         role: 'assistant',
         text: 'answer',
         createdAt: new Date(2).toISOString(),
@@ -115,6 +121,7 @@ describe('resolveDiscordContext', () => {
         messageId: '3',
         authorId: 'querying-user',
         authorName: 'querying-user',
+        authorAvatarUrl: 'https://cdn.discordapp.com/querying-user.png',
         role: 'user',
         text: 'follow-up',
         createdAt: new Date(3).toISOString(),

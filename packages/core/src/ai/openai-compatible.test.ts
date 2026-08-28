@@ -102,4 +102,123 @@ describe('OpenAICompatibleResearchProvider conversation messages', () => {
 
     expect(completionCreate.mock.calls[0]?.[0]).not.toHaveProperty('temperature');
   });
+
+  it('sends deduplicated labeled avatars for mentioned users and caps the image count', async () => {
+    const provider = new OpenAICompatibleResearchProvider({
+      apiKey: 'test-key',
+      baseURL: 'https://gateway.example/v1',
+      model: 'provider-model-id',
+    });
+    const mentionedUsers = Array.from({ length: 5 }, (_, index) => ({
+      id: `member-${index}`,
+      name: `Member ${index}`,
+      avatarUrl: `https://cdn.discordapp.com/member-${index}.png`,
+    }));
+
+    await provider.research({
+      question: 'menurut lu mereka gimana?',
+      metadata: {
+        userId: 'active',
+        speakerName: 'Active User',
+        speakerAvatarUrl: 'https://cdn.discordapp.com/active.png',
+        mentionedUsers: [...mentionedUsers, mentionedUsers[0]!],
+      },
+      source: {
+        messageId: 'source',
+        author: {
+          id: 'source-author',
+          name: 'Source Author',
+          avatarUrl: 'https://cdn.discordapp.com/source.png',
+        },
+        text: 'context',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    const request = completionCreate.mock.calls[0]?.[0];
+    const content = request.messages.at(-1).content as Array<{
+      type: string;
+      text?: string;
+      image_url?: { url: string };
+    }>;
+    const avatarImages = content.filter((part) => part.type === 'image_url');
+    const labels = content.filter((part) => part.type === 'text').map((part) => part.text);
+
+    expect(avatarImages).toHaveLength(4);
+    expect(avatarImages.map((part) => part.image_url?.url)).toEqual(
+      mentionedUsers.slice(0, 4).map((participant) => participant.avatarUrl),
+    );
+    expect(labels).toContainEqual(expect.stringContaining('Member 0 (user ID member-0)'));
+    expect(labels.join('\n')).not.toContain('Source Author (user ID source-author)');
+    expect(labels.join('\n')).not.toContain('Active User (user ID active)');
+  });
+
+  it('adds source and active-speaker avatars for appearance requests', async () => {
+    const provider = new OpenAICompatibleResearchProvider({
+      apiKey: 'test-key',
+      baseURL: 'https://gateway.example/v1',
+      model: 'provider-model-id',
+    });
+
+    await provider.research({
+      question: 'roast avatar gue dan dia dong',
+      metadata: {
+        userId: 'active',
+        speakerName: 'Active User',
+        speakerAvatarUrl: 'https://cdn.discordapp.com/active.png',
+      },
+      source: {
+        messageId: 'source',
+        author: {
+          id: 'source-author',
+          name: 'Source Author',
+          avatarUrl: 'https://cdn.discordapp.com/source.png',
+        },
+        text: 'context',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    const request = completionCreate.mock.calls[0]?.[0];
+    const content = request.messages.at(-1).content as Array<{
+      type: string;
+      text?: string;
+      image_url?: { url: string };
+    }>;
+    expect(content.map((part) => part.image_url?.url).filter(Boolean)).toEqual([
+      'https://cdn.discordapp.com/source.png',
+      'https://cdn.discordapp.com/active.png',
+    ]);
+  });
+
+  it('compacts short casual provider output before delivery', async () => {
+    completionCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: 'Santai aja, bro.\n\nNgapain dibikin ribet.' } }],
+    });
+    const provider = new OpenAICompatibleResearchProvider({
+      apiKey: 'test-key',
+      baseURL: 'https://gateway.example/v1',
+      model: 'provider-model-id',
+    });
+
+    const result = await provider.research({
+      question: 'menurut lu gimana?',
+      source: {
+        messageId: 'source',
+        text: 'context',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    expect(result.content).toBe('Santai aja, bro. Ngapain dibikin ribet.');
+  });
 });

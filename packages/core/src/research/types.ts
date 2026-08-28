@@ -7,6 +7,13 @@ export interface ResearchTurn {
   content: string;
   speakerId?: string | undefined;
   speakerName?: string | undefined;
+  speakerAvatarUrl?: string | undefined;
+}
+
+export interface ResearchParticipant {
+  id: string;
+  name: string;
+  avatarUrl?: string | undefined;
 }
 
 export interface ResearchMetadata {
@@ -16,6 +23,8 @@ export interface ResearchMetadata {
   queryMessageId?: string | undefined;
   userId?: string | undefined;
   speakerName?: string | undefined;
+  speakerAvatarUrl?: string | undefined;
+  mentionedUsers?: ResearchParticipant[] | undefined;
 }
 
 export interface ResearchInput {

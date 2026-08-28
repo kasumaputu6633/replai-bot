@@ -17,6 +17,9 @@ interface FakeMessageOptions {
   channel?: FakeChannel;
   authorId?: string;
   authorBot?: boolean;
+  authorName?: string;
+  authorAvatarUrl?: string;
+  mentionedUsers?: Array<{ id: string; name: string; avatarUrl: string }>;
   replyError?: Error;
 }
 
@@ -54,23 +57,73 @@ function fakeMessage(options: FakeMessageOptions): Message {
   const referenced = options.reference ?? null;
   const assistantMessage = {
     id: `assistant-${options.id}`,
-    author: { id: 'bot' },
+    author: {
+      id: 'bot',
+      displayName: 'Replai',
+      globalName: 'Replai',
+      username: 'replai',
+      displayAvatarURL: () => 'https://cdn.discordapp.com/bot.png',
+    },
     createdTimestamp: 10_000,
   } as Message;
   const reply = options.replyError
     ? vi.fn().mockRejectedValue(options.replyError)
     : vi.fn().mockResolvedValue(assistantMessage);
 
+  const mentionedUsers = [
+    {
+      id: 'bot',
+      name: 'Replai',
+      avatarUrl: 'https://cdn.discordapp.com/bot.png',
+    },
+    ...(options.mentionedUsers ?? []),
+  ];
+
   return {
     id: options.id,
     content: options.content,
-    author: { id: options.authorId ?? 'user', bot: options.authorBot ?? false },
+    author: {
+      id: options.authorId ?? 'user',
+      bot: options.authorBot ?? false,
+      displayName: options.authorName,
+      globalName: options.authorName,
+      username: options.authorName ?? options.authorId ?? 'user',
+      displayAvatarURL: () =>
+        options.authorAvatarUrl ??
+        `https://cdn.discordapp.com/${options.authorId ?? 'user'}.png`,
+    },
     channel,
     channelId: 'channel',
     guildId: 'guild',
+    guild: {
+      members: {
+        cache: {
+          get: (id: string) => {
+            const user = mentionedUsers.find((candidate) => candidate.id === id);
+            return user ? { displayName: user.name } : undefined;
+          },
+        },
+      },
+    },
     createdTimestamp: Number(options.id.replace(/\D/gu, '')) || 1,
     mentions: {
-      users: { has: (id: string) => id === 'bot' },
+      users: {
+        has: (id: string) => mentionedUsers.some((user) => user.id === id),
+        values: () =>
+          mentionedUsers.map((user) => ({
+            id: user.id,
+            displayName: user.name,
+            globalName: user.name,
+            username: user.name,
+            displayAvatarURL: () => user.avatarUrl,
+          }))[Symbol.iterator](),
+      },
+      members: {
+        get: (id: string) => {
+          const user = mentionedUsers.find((candidate) => candidate.id === id);
+          return user ? { displayName: user.name } : undefined;
+        },
+      },
       roles: {
         filter: () => ({ map: () => [] }),
       },
@@ -143,6 +196,7 @@ describe('handleMessageCreate', () => {
         content: 'Prior output is untrusted',
         speakerId: 'bot',
         speakerName: 'bot',
+        speakerAvatarUrl: 'https://cdn.discordapp.com/bot.png',
       },
     ]);
     expect(input.mode).toBe('answer');
@@ -213,6 +267,44 @@ describe('handleMessageCreate', () => {
         messageId: '7',
         text: 'besok Denpasar Barat cerah ngga ya?',
       },
+    });
+  });
+
+  it('passes active and mentioned-user identity with labeled avatar URLs', async () => {
+    const deps = dependencies();
+    const query = fakeMessage({
+      id: '10',
+      content: '<@bot> roast avatar <@friend> dari kelakuannya tadi',
+      authorName: 'Putu',
+      authorAvatarUrl: 'https://cdn.discordapp.com/putu.png',
+      mentionedUsers: [
+        {
+          id: 'friend',
+          name: 'Nanda Santai',
+          avatarUrl: 'https://cdn.discordapp.com/friend.png',
+        },
+      ],
+    });
+
+    await handleMessageCreate(query, deps);
+
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.metadata).toMatchObject({
+      userId: 'user',
+      speakerName: 'Putu',
+      speakerAvatarUrl: 'https://cdn.discordapp.com/putu.png',
+      mentionedUsers: [
+        {
+          id: 'friend',
+          name: 'Nanda Santai',
+          avatarUrl: 'https://cdn.discordapp.com/friend.png',
+        },
+      ],
+    });
+    expect(input.source.author).toMatchObject({
+      id: 'user',
+      name: 'Putu',
+      avatarUrl: 'https://cdn.discordapp.com/putu.png',
     });
   });
 
@@ -315,6 +407,7 @@ describe('handleMessageCreate', () => {
         content: 'A second contextual claim',
         speakerId: 'participant',
         speakerName: 'participant',
+        speakerAvatarUrl: 'https://cdn.discordapp.com/participant.png',
       },
     ]);
     expect(input.source.urls).toEqual(['https://one.example/a']);

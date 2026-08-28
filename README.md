@@ -13,13 +13,13 @@ Replai combines Discord context, bounded web research, multimodal input, and det
 ## Highlights
 
 - **Natural Discord conversation:** banters, debates, brainstorms, writes, codes, and gives direct opinions without forcing every request into research mode.
-- **Speaker-aware context:** preserves member display names and user/assistant roles across replies and thread memory.
+- **Speaker-aware context:** preserves member display names, avatars, individual speaking style, and user/assistant roles across replies and thread memory.
 - **Context-aware research:** understands direct questions, replies, reply chains, embeds, attachments, images, and recent thread messages.
 - **Live web evidence:** searches current sources and extracts supported social-media pages through 9Router.
 - **Claim verification:** recognizes fact-checking requests and explains the conclusion, evidence, confidence, and limitations in natural prose.
 - **Source comparison:** researches named products or claims independently before explaining practical trade-offs.
 - **Natural follow-ups:** keeps a small, expiring conversation context inside Discord threads.
-- **Multimodal analysis:** passes Discord-hosted images to compatible vision models.
+- **Multimodal analysis:** passes Discord-hosted images plus labeled participant avatars when a user is mentioned or appearance feedback is relevant.
 - **Clean citations:** validates evidence markers internally, then presents trusted source links without citation numbers in the prose.
 - **Defense in depth:** applies deterministic input guards, untrusted-data boundaries, output leakage checks, SSRF controls, and refusal-safe formatting.
 
@@ -56,7 +56,7 @@ And contextual questions by replying to a Discord message:
 
 1. The Discord bot detects a user or managed bot-role mention.
 2. It resolves the direct message, referenced reply chain, recent thread context, and optional thread memory.
-3. Discord content is normalized into bounded text, URL, embed, attachment, and image data.
+3. Discord content is normalized into bounded text, URL, embed, attachment, image, participant, mention, and avatar data.
 4. Narrow deterministic guards block private-prompt/credential extraction and explicit-content discovery before provider calls.
 5. Replai searches each research target independently and fetches supported social links when relevant.
 6. The model receives prior turns with real user/assistant roles, while quoted messages and web evidence remain bounded structured data.
@@ -187,9 +187,9 @@ Limits are deliberately conservative to control cost, latency, prompt size, and 
 
 | Resource | Limit |
 | --- | --- |
-| Reply-chain depth | 6 messages |
-| Recent thread messages | 8 messages |
-| Combined Discord context | 10 messages / 12,000 characters |
+| Reply-chain depth | 8 messages |
+| Recent thread messages | 12 messages |
+| Combined Discord context | 16 messages / 20,000 characters |
 | Thread memory | 12 turns / 20,000 characters / 60-minute TTL |
 | In-memory conversations | 500 |
 | Comparison targets | Primary target plus up to 4 additional targets |
@@ -265,6 +265,7 @@ The Docker build installs the frozen lockfile, builds the workspace, and deploys
 - Search and social extraction depend on the configured 9Router routes.
 - Attachment MIME types and filename extensions are treated as hints, not proof of content type.
 - Image analysis depends on the configured model and its ability to reach Discord CDN URLs.
+- Avatar commentary is limited to visible details supplied to the model; it should not be treated as identity or personality analysis.
 - Replies may be split into multiple Discord messages when they exceed platform limits.
 
 ## License

@@ -18,9 +18,14 @@ import {
   researchTargetLabel,
 } from '../research/mode.js';
 import { researchInputSchema } from '../research/schemas.js';
-import type { ResearchInput, ResearchResult } from '../research/types.js';
+import type {
+  ResearchInput,
+  ResearchParticipant,
+  ResearchResult,
+} from '../research/types.js';
 import { guardResearchOutput, isResearchRefusal } from '../security/guard.js';
 import type { ResearchProvider } from './provider.js';
+import { compactConversationReply } from './conversation-format.js';
 import {
   buildConversationPrompt,
   buildReplaiSystemPrompt,
@@ -38,6 +43,63 @@ import {
   hasSearchableWebContext,
   NineRouterWebSearchClient,
 } from './web-search.js';
+
+const MAX_PARTICIPANT_AVATARS = 4;
+const AVATAR_RELEVANT_REQUEST =
+  /\b(?:avatar|pp|profile\s*(?:pic(?:ture)?|photo)|foto|photo|pic|gambar|muka|wajah|face|penampilan|appearance|outfit|roast|hujat|kritik|critique|rate|nilai|aura|vibe|kelihatan|ganteng|cantik)\b/iu;
+
+function participantAvatarParts(input: ResearchInput): ChatCompletionContentPart[] {
+  const candidates: ResearchParticipant[] = [...(input.metadata?.mentionedUsers ?? [])];
+  if (AVATAR_RELEVANT_REQUEST.test(input.question)) {
+    if (input.source.author) {
+      candidates.push(input.source.author);
+    }
+    if (input.metadata?.userId && input.metadata.speakerName) {
+      candidates.push({
+        id: input.metadata.userId,
+        name: input.metadata.speakerName,
+        ...(input.metadata.speakerAvatarUrl
+          ? { avatarUrl: input.metadata.speakerAvatarUrl }
+          : {}),
+      });
+    }
+    for (const turn of input.context ?? []) {
+      if (turn.speakerId && turn.speakerName) {
+        candidates.push({
+          id: turn.speakerId,
+          name: turn.speakerName,
+          ...(turn.speakerAvatarUrl ? { avatarUrl: turn.speakerAvatarUrl } : {}),
+        });
+      }
+    }
+  }
+
+  const seenIds = new Set<string>();
+  const seenUrls = new Set<string>();
+  const selected = candidates.filter((participant) => {
+    if (
+      !participant.avatarUrl ||
+      seenIds.has(participant.id) ||
+      seenUrls.has(participant.avatarUrl)
+    ) {
+      return false;
+    }
+    seenIds.add(participant.id);
+    seenUrls.add(participant.avatarUrl);
+    return true;
+  }).slice(0, MAX_PARTICIPANT_AVATARS);
+
+  return selected.flatMap<ChatCompletionContentPart>((participant) => [
+    {
+      type: 'text',
+      text: `LABELED DISCORD AVATAR: ${participant.name} (user ID ${participant.id}). The next image is this participant's avatar. Comment only on visible details.`,
+    },
+    {
+      type: 'image_url',
+      image_url: { url: participant.avatarUrl!, detail: 'auto' },
+    },
+  ]);
+}
 
 export class OpenAICompatibleResearchProvider implements ResearchProvider {
   readonly #client: OpenAI;
@@ -146,6 +208,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
           type: 'image_url' as const,
           image_url: { url: image.url, detail: 'auto' as const },
         })),
+        ...participantAvatarParts(validatedInput),
       ];
 
       let previousDraft: string | undefined;
@@ -209,11 +272,14 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
                 )
               : structured;
           const guarded = guardResearchOutput(evidenced);
+          const delivered = isConversation
+            ? compactConversationReply(guarded, validatedInput.question)
+            : guarded;
           return {
             content:
               guarded === evidenced && !isResearchRefusal(guarded)
-                ? appendTrustedSources(guarded, isConversation ? [] : evidenceCatalog)
-                : guarded,
+                ? appendTrustedSources(delivered, isConversation ? [] : evidenceCatalog)
+                : delivered,
           };
         }
       }

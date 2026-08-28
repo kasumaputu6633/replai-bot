@@ -1,9 +1,9 @@
 import type { Message } from 'discord.js';
 
-export const MAX_REPLY_CHAIN_DEPTH = 6;
-export const MAX_THREAD_CONTEXT_MESSAGES = 8;
-export const MAX_CONTEXT_MESSAGES = 10;
-export const MAX_CONTEXT_CHARACTERS = 12_000;
+export const MAX_REPLY_CHAIN_DEPTH = 8;
+export const MAX_THREAD_CONTEXT_MESSAGES = 12;
+export const MAX_CONTEXT_MESSAGES = 16;
+export const MAX_CONTEXT_CHARACTERS = 20_000;
 
 export type DiscordContextRole = 'user' | 'assistant' | 'participant';
 
@@ -11,6 +11,7 @@ export interface DiscordContextTurn {
   messageId: string;
   authorId: string;
   authorName: string;
+  authorAvatarUrl: string;
   role: DiscordContextRole;
   text: string;
   createdAt: string;
@@ -69,6 +70,7 @@ function compactMessages(
       messageId: message.id,
       authorId: message.author.id,
       authorName: authorNameFor(message),
+      authorAvatarUrl: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
       role: roleFor(message, options),
       text: boundedText,
       createdAt: new Date(message.createdTimestamp).toISOString(),

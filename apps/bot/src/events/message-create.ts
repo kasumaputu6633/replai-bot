@@ -1,8 +1,10 @@
 import {
   assessResearchQuestion,
   buildResearchGuardRefusal,
+  MAX_RESEARCH_PARTICIPANTS,
   research,
   type ResearchInput,
+  type ResearchParticipant,
   type ResearchProvider,
   type SourceContext,
 } from '@replai/core';
@@ -66,12 +68,31 @@ function hasStandaloneEvidence(source: SourceContext): boolean {
   );
 }
 
+function mentionedParticipants(message: Message, botUserId: string): ResearchParticipant[] {
+  return [...message.mentions.users.values()]
+    .filter((user) => user.id !== botUserId)
+    .slice(0, MAX_RESEARCH_PARTICIPANTS)
+    .map((user) => ({
+      id: user.id,
+      name: (
+        message.mentions.members?.get(user.id)?.displayName ??
+        message.guild?.members.cache.get(user.id)?.displayName ??
+        user.displayName ??
+        user.globalName ??
+        user.username ??
+        user.id
+      ).slice(0, 100),
+      avatarUrl: user.displayAvatarURL({ extension: 'png', size: 256 }),
+    }));
+}
+
 function buildResearchInput(
   question: string,
   source: SourceContext,
   resolvedTurns: readonly ResearchContextTurn[],
   memory: ThreadMemorySnapshot | null,
   message: Message,
+  botUserId: string,
 ): ResearchInput {
   const input = parseResearchRequest({
     question,
@@ -93,6 +114,8 @@ function buildResearchInput(
         message.author.globalName ??
         message.author.username ??
         message.author.id,
+      speakerAvatarUrl: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
+      mentionedUsers: mentionedParticipants(message, botUserId),
     },
   };
 }
@@ -187,7 +210,14 @@ export async function handleMessageCreate(
     await replySafely(message, MISSING_REFERENCE_RESPONSE, dependencies.logger);
     return;
   }
-  const input = buildResearchInput(question, source, resolved?.turns ?? [], memory, message);
+  const input = buildResearchInput(
+    question,
+    source,
+    resolved?.turns ?? [],
+    memory,
+    message,
+    botUserId,
+  );
 
   const startedAt = performance.now();
 
@@ -211,6 +241,7 @@ export async function handleMessageCreate(
             message.author.globalName ??
             message.author.username ??
             message.author.id,
+          authorAvatarUrl: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
           role: 'user',
           text: question,
           createdAt: new Date(message.createdTimestamp).toISOString(),
@@ -224,6 +255,10 @@ export async function handleMessageCreate(
             assistantMessage.author.globalName ??
             assistantMessage.author.username ??
             assistantMessage.author.id,
+          authorAvatarUrl: assistantMessage.author.displayAvatarURL({
+            extension: 'png',
+            size: 256,
+          }),
           role: 'assistant',
           text: result.content,
           createdAt: new Date(assistantMessage.createdTimestamp).toISOString(),

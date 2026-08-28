@@ -11,7 +11,18 @@ describe('conversation prompts', () => {
   it('treats the active request as an instruction and Discord content as context', () => {
     const prompt = buildConversationPrompt({
       question: 'menurut lu desain ini bagus gak? bahas agak dalam',
-      metadata: { userId: 'user-1', speakerName: 'Putu' },
+      metadata: {
+        userId: 'user-1',
+        speakerName: 'Putu',
+        speakerAvatarUrl: 'https://cdn.discordapp.com/putu.png',
+        mentionedUsers: [
+          {
+            id: 'member-1',
+            name: 'Nanda',
+            avatarUrl: 'https://cdn.discordapp.com/nanda.png',
+          },
+        ],
+      },
       source: {
         messageId: 'casual',
         author: { id: 'member-1', name: 'Nanda' },
@@ -27,6 +38,8 @@ describe('conversation prompts', () => {
     expect(prompt).toContain('"activeRequest"');
     expect(prompt).toContain('"name": "Putu"');
     expect(prompt).toContain('"name": "Nanda"');
+    expect(prompt).toContain('"mentionedUsers"');
+    expect(prompt).toContain('connect <@user-id> mentions');
     expect(prompt).toContain('Match the requested depth');
     expect(prompt).not.toContain('one to three short sentences');
     expect(prompt).not.toContain('trustedEvidenceCatalog');
@@ -135,6 +148,12 @@ describe('Replai system prompt', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('You may disagree');
     expect(REPLAI_SYSTEM_PROMPT).toContain('Do not fake neutrality');
     expect(REPLAI_SYSTEM_PROMPT).toContain('allow longer thoughtful discussion');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('mirror roughly the same intensity');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('do not force profanity');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Track who said what');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('labeled avatar images');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('one compact paragraph');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('do not put every sentence on a new line');
   });
 
   it('keeps evidence bounded without distrusting the active user', () => {

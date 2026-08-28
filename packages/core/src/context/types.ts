@@ -24,6 +24,7 @@ export interface SourceEmbed {
 export interface SourceAuthor {
   id: string;
   name: string;
+  avatarUrl?: string | undefined;
   bot?: boolean | undefined;
 }
 

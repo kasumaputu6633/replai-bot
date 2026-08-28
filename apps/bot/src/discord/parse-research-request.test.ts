@@ -31,6 +31,7 @@ function turn(
     messageId,
     authorId: `${role}-${messageId}`,
     authorName: role === 'assistant' ? 'Replai' : `Member ${messageId}`,
+    authorAvatarUrl: `https://cdn.discordapp.com/${messageId}.png`,
     role,
     text,
     createdAt: new Date(createdAt).toISOString(),
@@ -59,6 +60,7 @@ describe('parseResearchRequest', () => {
       content: 'newest duplicate',
       speakerId: 'assistant-message-9',
       speakerName: 'Replai',
+      speakerAvatarUrl: 'https://cdn.discordapp.com/message-9.png',
     });
     expect(input).not.toHaveProperty('comparisonSources');
   });
@@ -77,6 +79,7 @@ describe('parseResearchRequest', () => {
         content: 'x'.repeat(MAX_RESEARCH_TURN_LENGTH),
         speakerId: 'participant-participant',
         speakerName: 'Member participant',
+        speakerAvatarUrl: 'https://cdn.discordapp.com/participant.png',
       },
     ]);
   });

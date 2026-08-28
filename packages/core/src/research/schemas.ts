@@ -4,6 +4,7 @@ import {
   MAX_COMPARISON_SOURCES,
   MAX_EMBEDS,
   MAX_IMAGES,
+  MAX_RESEARCH_PARTICIPANTS,
   MAX_RESEARCH_TURN_LENGTH,
   MAX_RESEARCH_TURNS,
   MAX_SOURCE_TEXT_LENGTH,
@@ -38,6 +39,7 @@ export const sourceEmbedSchema = z.object({
 export const sourceAuthorSchema = z.object({
   id: z.string().trim().min(1),
   name: z.string().trim().min(1).max(100),
+  avatarUrl: z.url().optional(),
   bot: z.boolean().optional(),
 });
 
@@ -58,6 +60,13 @@ export const researchTurnSchema = z.object({
   content: z.string().trim().min(1).max(MAX_RESEARCH_TURN_LENGTH),
   speakerId: optionalNonEmptyString,
   speakerName: z.string().trim().min(1).max(100).optional(),
+  speakerAvatarUrl: z.url().optional(),
+});
+
+export const researchParticipantSchema = z.object({
+  id: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(100),
+  avatarUrl: z.url().optional(),
 });
 
 export const researchInputSchema = z.object({
@@ -74,6 +83,11 @@ export const researchInputSchema = z.object({
       queryMessageId: optionalNonEmptyString,
       userId: optionalNonEmptyString,
       speakerName: z.string().trim().min(1).max(100).optional(),
+      speakerAvatarUrl: z.url().optional(),
+      mentionedUsers: z
+        .array(researchParticipantSchema)
+        .max(MAX_RESEARCH_PARTICIPANTS)
+        .optional(),
     })
     .optional(),
 });

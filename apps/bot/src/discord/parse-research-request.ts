@@ -14,6 +14,7 @@ export interface ResearchContextTurn {
   messageId: string;
   authorId?: string | undefined;
   authorName?: string | undefined;
+  authorAvatarUrl?: string | undefined;
   role: 'user' | 'assistant' | 'participant';
   text: string;
   createdAt: string;
@@ -170,6 +171,7 @@ export function parseResearchRequest(options: ParseResearchRequestOptions): Rese
     content: turn.text.trim().slice(0, MAX_RESEARCH_TURN_LENGTH),
     ...(turn.authorId ? { speakerId: turn.authorId } : {}),
     ...(turn.authorName ? { speakerName: turn.authorName } : {}),
+    ...(turn.authorAvatarUrl ? { speakerAvatarUrl: turn.authorAvatarUrl } : {}),
   }));
   const input: ResearchInput = {
     question: options.question,

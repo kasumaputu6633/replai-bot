@@ -5,4 +5,5 @@ export const MAX_ATTACHMENTS = 12;
 export const MAX_EMBEDS = 8;
 export const MAX_RESEARCH_TURNS = 12;
 export const MAX_RESEARCH_TURN_LENGTH = 3_000;
+export const MAX_RESEARCH_PARTICIPANTS = 8;
 export const MAX_COMPARISON_SOURCES = 4;

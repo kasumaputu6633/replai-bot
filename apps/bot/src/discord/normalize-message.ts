@@ -183,6 +183,7 @@ export function normalizeDiscordMessage(message: Message): SourceContext {
     author: {
       id: message.author.id,
       name: authorName.slice(0, 100),
+      avatarUrl: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
       bot: message.author.bot,
     },
     ...mapDiscordContent(message),

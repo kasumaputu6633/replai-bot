@@ -5,7 +5,12 @@ describe('normalizeMessageData', () => {
   it('converts Discord-like data into bounded provider-independent context', () => {
     const result = normalizeMessageData({
       id: 'message-1',
-      author: { id: 'member-1', name: 'Nanda', bot: false },
+      author: {
+        id: 'member-1',
+        name: 'Nanda',
+        avatarUrl: 'https://cdn.discordapp.com/avatar.png',
+        bot: false,
+      },
       content: 'Claim at https://example.com and https://example.com',
       attachments: [
         {
@@ -34,7 +39,12 @@ describe('normalizeMessageData', () => {
 
     expect(result).toMatchObject({
       messageId: 'message-1',
-      author: { id: 'member-1', name: 'Nanda', bot: false },
+      author: {
+        id: 'member-1',
+        name: 'Nanda',
+        avatarUrl: 'https://cdn.discordapp.com/avatar.png',
+        bot: false,
+      },
       text: 'Claim at https://example.com and https://example.com',
       attachments: [
         { filename: 'photo.webp', size: 42 },

@@ -1,4 +1,5 @@
 export { OpenAICompatibleResearchProvider } from './ai/openai-compatible.js';
+export { compactConversationReply } from './ai/conversation-format.js';
 export type { ResearchProvider } from './ai/provider.js';
 export {
   buildConversationPrompt,
@@ -17,6 +18,7 @@ export {
   MAX_COMPARISON_SOURCES,
   MAX_EMBEDS,
   MAX_IMAGES,
+  MAX_RESEARCH_PARTICIPANTS,
   MAX_RESEARCH_TURN_LENGTH,
   MAX_RESEARCH_TURNS,
   MAX_SOURCE_TEXT_LENGTH,
@@ -66,6 +68,7 @@ export {
 export {
   researchInputSchema,
   researchModeSchema,
+  researchParticipantSchema,
   researchTurnSchema,
   sourceAuthorSchema,
   sourceContextSchema,
@@ -74,6 +77,7 @@ export type {
   ResearchInput,
   ResearchMetadata,
   ResearchMode,
+  ResearchParticipant,
   ResearchResult,
   ResearchTurn,
 } from './research/types.js';

@@ -11,6 +11,7 @@ export interface ThreadMemoryTurn {
   messageId: string;
   authorId: string;
   authorName?: string | undefined;
+  authorAvatarUrl?: string | undefined;
   role: ThreadMemoryRole;
   text: string;
   createdAt: string;
