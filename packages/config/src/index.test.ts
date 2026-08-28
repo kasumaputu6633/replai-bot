@@ -22,6 +22,18 @@ describe('loadBotConfig', () => {
       temperature: undefined,
       ownerName: 'Nando Ganteng',
     });
+    expect(loadBotConfig().afkStatePath).toBe('data/afk-guilds.json');
+  });
+
+  it('accepts a Railway volume path for persistent AFK state', () => {
+    vi.stubEnv('DISCORD_TOKEN', 'discord-token');
+    vi.stubEnv('DISCORD_CLIENT_ID', '123456789');
+    vi.stubEnv('AFK_STATE_PATH', '/app/data/afk-guilds.json');
+    vi.stubEnv('AI_BASE_URL', 'https://gateway.example/v1');
+    vi.stubEnv('AI_API_KEY', 'api-key');
+    vi.stubEnv('AI_MODEL', 'provider-model');
+
+    expect(loadBotConfig().afkStatePath).toBe('/app/data/afk-guilds.json');
   });
 
   it('parses configured public identity and temperature', () => {

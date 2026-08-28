@@ -59,6 +59,13 @@ function isStoredConversationSource(
   );
 }
 
+export function conversationMemoryKey(
+  guildId: string | null,
+  channelId: string,
+): string {
+  return `${guildId ?? '@me'}:${channelId}`;
+}
+
 function hasStandaloneEvidence(source: SourceContext): boolean {
   return (
     source.urls.length > 0 ||
@@ -153,7 +160,8 @@ export async function handleMessageCreate(
   }
 
   const isThread = message.channel.isThread();
-  const existingMemory = isThread ? dependencies.threadMemory.get(message.channelId) : null;
+  const memoryKey = conversationMemoryKey(message.guildId, message.channelId);
+  const existingMemory = isThread ? dependencies.threadMemory.get(memoryKey) : null;
   const question = parseQuestion(message.content, botUserId, botRoleIds);
   const normalizedDirectSource = !message.reference?.messageId
     ? normalizeDiscordMessage(message)
@@ -230,7 +238,7 @@ export async function handleMessageCreate(
     if (isThread) {
       storeDeliveredInteraction(
         dependencies.threadMemory,
-        message.channelId,
+        memoryKey,
         source,
         {
           messageId: message.id,

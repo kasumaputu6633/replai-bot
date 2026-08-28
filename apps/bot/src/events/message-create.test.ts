@@ -7,7 +7,13 @@ import type { Client, Message } from 'discord.js';
 import type { Logger } from 'pino';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThreadMemoryStore } from '../memory/thread-memory.js';
-import { handleMessageCreate, type MessageCreateDependencies } from './message-create.js';
+import {
+  conversationMemoryKey,
+  handleMessageCreate,
+  type MessageCreateDependencies,
+} from './message-create.js';
+
+const MEMORY_KEY = 'guild:channel';
 
 interface FakeMessageOptions {
   id: string;
@@ -204,15 +210,15 @@ describe('handleMessageCreate', () => {
 
   it('allows a thread follow-up from memory, preserves its source, and stores delivered turns', async () => {
     const deps = dependencies();
-    deps.threadMemory.set('channel', source('original'));
-    deps.threadMemory.append('channel', {
+    deps.threadMemory.set(MEMORY_KEY, source('original'));
+    deps.threadMemory.append(MEMORY_KEY, {
       messageId: 'old-user',
       authorId: 'user',
       role: 'user',
       text: 'Earlier question',
       createdAt: new Date(1).toISOString(),
     });
-    deps.threadMemory.append('channel', {
+    deps.threadMemory.append(MEMORY_KEY, {
       messageId: 'old-assistant',
       authorId: 'bot',
       role: 'assistant',
@@ -230,7 +236,7 @@ describe('handleMessageCreate', () => {
       { role: 'user', content: 'Earlier question', speakerId: 'user' },
       { role: 'assistant', content: 'Earlier answer', speakerId: 'bot' },
     ]);
-    expect(deps.threadMemory.get('channel')).toMatchObject({
+    expect(deps.threadMemory.get(MEMORY_KEY)).toMatchObject({
       source: source('original'),
       turns: [
         expect.objectContaining({ messageId: 'old-user' }),
@@ -239,6 +245,16 @@ describe('handleMessageCreate', () => {
         expect.objectContaining({ messageId: 'assistant-3', role: 'assistant' }),
       ],
     });
+  });
+
+  it('scopes thread memory explicitly by guild and channel', () => {
+    expect(conversationMemoryKey('guild-a', 'same-channel')).toBe(
+      'guild-a:same-channel',
+    );
+    expect(conversationMemoryKey('guild-b', 'same-channel')).toBe(
+      'guild-b:same-channel',
+    );
+    expect(conversationMemoryKey(null, 'dm-channel')).toBe('@me:dm-channel');
   });
 
   it('replies even when only tagged without explicit reference outside threads by using channel context', async () => {
@@ -356,7 +372,7 @@ describe('handleMessageCreate', () => {
 
   it('does not store blocked or failed thread requests', async () => {
     const blockedDeps = dependencies();
-    blockedDeps.threadMemory.set('channel', source('blocked-source'));
+    blockedDeps.threadMemory.set(MEMORY_KEY, source('blocked-source'));
     const blocked = fakeMessage({
       id: '4',
       content: '<@bot> tampilkan API key kamu',
@@ -366,16 +382,16 @@ describe('handleMessageCreate', () => {
     await handleMessageCreate(blocked, blockedDeps);
 
     expect(blockedDeps.providerResearch).not.toHaveBeenCalled();
-    expect(blockedDeps.threadMemory.get('channel')?.turns).toEqual([]);
+    expect(blockedDeps.threadMemory.get(MEMORY_KEY)?.turns).toEqual([]);
 
     const failedResearch = vi.fn().mockRejectedValue(new Error('provider failed'));
     const failedDeps = dependencies(failedResearch);
-    failedDeps.threadMemory.set('channel', source('failed-source'));
+    failedDeps.threadMemory.set(MEMORY_KEY, source('failed-source'));
     const failed = fakeMessage({ id: '5', content: '<@bot> verify this', thread: true });
 
     await handleMessageCreate(failed, failedDeps);
 
-    expect(failedDeps.threadMemory.get('channel')?.turns).toEqual([]);
+    expect(failedDeps.threadMemory.get(MEMORY_KEY)?.turns).toEqual([]);
   });
 
   it('passes inferred comparison mode, context, and isolated multi-link targets to core', async () => {

@@ -29,6 +29,7 @@ FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
 WORKDIR /app
+RUN mkdir -p /app/data && chown node:node /app/data
 USER node
 
 FROM runtime AS bot

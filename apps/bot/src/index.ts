@@ -1,7 +1,13 @@
 import { createLogger, loadBotConfig } from '@replai/config';
 import { OpenAICompatibleResearchProvider } from '@replai/core';
 import { Events } from 'discord.js';
+import { AfkStateStore } from './afk/state-store.js';
+import { AfkVoiceManager } from './afk/voice-manager.js';
 import { createDiscordClient } from './client.js';
+import {
+  registerAfkApplicationCommand,
+  registerAfkInteractionHandler,
+} from './commands/afk.js';
 import { registerMessageCreateHandler } from './events/message-create.js';
 import { ThreadMemoryStore } from './memory/thread-memory.js';
 
@@ -9,6 +15,8 @@ const config = loadBotConfig();
 const logger = createLogger('replai-bot', config.logLevel);
 const client = createDiscordClient();
 const threadMemory = new ThreadMemoryStore();
+const afkState = await AfkStateStore.open(config.afkStatePath);
+const afkVoice = new AfkVoiceManager(client, afkState, logger);
 const provider = new OpenAICompatibleResearchProvider({
   apiKey: config.ai.apiKey,
   baseURL: config.ai.baseUrl,
@@ -29,12 +37,14 @@ registerMessageCreateHandler({
   model: config.ai.model,
   threadMemory,
 });
+registerAfkInteractionHandler(client, afkVoice, logger);
 
 let shutdownPromise: Promise<void> | undefined;
 
 function shutdown(signal: string): Promise<void> {
   shutdownPromise ??= Promise.resolve().then(() => {
     logger.info({ signal }, 'Shutting down Discord bot');
+    afkVoice.shutdown();
     client.destroy();
   });
   return shutdownPromise;
@@ -50,7 +60,16 @@ client.once(Events.ClientReady, (readyClient) => {
       'DISCORD_CLIENT_ID does not match the authenticated bot',
     );
   }
-  logger.info({ userId: readyClient.user.id }, 'Discord bot connected');
+  logger.info(
+    { userId: readyClient.user.id, guildCount: readyClient.guilds.cache.size },
+    'Discord bot connected',
+  );
+  void Promise.all([
+    registerAfkApplicationCommand(readyClient, logger),
+    afkVoice.restore(),
+  ]).catch((error: unknown) => {
+    logger.error({ err: error }, 'Failed to initialize AFK features');
+  });
 });
 
 try {

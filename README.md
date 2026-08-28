@@ -19,6 +19,7 @@ Replai combines Discord context, bounded web research, multimodal input, and det
 - **Claim verification:** recognizes fact-checking requests and explains the conclusion, evidence, confidence, and limitations in natural prose.
 - **Source comparison:** researches named products or claims independently before explaining practical trade-offs.
 - **Natural follow-ups:** keeps a small, expiring conversation context inside Discord threads.
+- **Multi-guild AFK voice:** each server can pin the muted/deafened bot to its own voice channel with `/afk`, including persistent startup restore and reconnect.
 - **Multimodal analysis:** passes Discord-hosted images plus labeled participant avatars when a user is mentioned or appearance feedback is relevant.
 - **Clean citations:** validates evidence markers internally, then presents trusted source links without citation numbers in the prose.
 - **Defense in depth:** applies deterministic input guards, untrusted-data boundaries, output leakage checks, SSRF controls, and refusal-safe formatting.
@@ -142,6 +143,7 @@ The API listens on `http://localhost:3000` by default:
 | `LOG_LEVEL` | Both | `info` | Pino log level |
 | `DISCORD_TOKEN` | Bot | Required | Discord bot token |
 | `DISCORD_CLIENT_ID` | Bot | Required | Discord application ID |
+| `AFK_STATE_PATH` | Bot | `data/afk-guilds.json` | Persistent JSON path for per-guild AFK voice configuration |
 | `AI_BASE_URL` | Bot | Required | OpenAI-compatible API base URL, usually ending in `/v1` |
 | `AI_API_KEY` | Bot | Required | AI provider API key |
 | `AI_MODEL` | Bot | Required | Chat model identifier |
@@ -161,11 +163,23 @@ Environment values are validated at startup. Secret-shaped fields are redacted f
 1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
 2. Open **Bot**, create the bot user, and copy its token into `DISCORD_TOKEN`.
 3. Enable **Message Content Intent** under **Privileged Gateway Intents**.
-4. Open **OAuth2 > URL Generator** and select the `bot` scope.
-5. Grant **View Channels**, **Send Messages**, **Send Messages in Threads**, and **Read Message History**.
+4. Open **OAuth2 > URL Generator** and select the `bot` and `applications.commands` scopes.
+5. Grant **View Channels**, **Send Messages**, **Send Messages in Threads**, **Read Message History**, and **Connect**.
 6. Install the bot in your server and place the application ID in `DISCORD_CLIENT_ID`.
 
-The runtime requests only `Guilds`, `GuildMessages`, and `MessageContent` gateway intents.
+The runtime requests `Guilds`, `GuildMessages`, `GuildVoiceStates`, and `MessageContent` gateway intents.
+
+The global `/afk` command is restricted to members with **Manage Server**:
+
+```text
+/afk channel:#lobby    Join, stay muted/deafened, and remember this channel
+/afk                   Show AFK status for the current server
+/afk stop:true         Leave and remove the saved AFK channel
+```
+
+Discord's channel option provides native name autocomplete. Because the command is global, it works independently in every server where the bot is installed; Discord may take a few minutes to refresh a newly registered global command.
+
+For a public bot approaching 100 guilds, complete Discord application verification and request approval for the privileged **Message Content Intent** so mention-based replies keep working at scale.
 
 ## Interaction Model
 
@@ -176,6 +190,7 @@ The runtime requests only `Guilds`, `GuildMessages`, and `MessageContent` gatewa
 | Mention plus URL, embed, image, or attachment | Analyzes evidence from the same message |
 | Reply plus mention | Resolves the referenced message and its reply chain |
 | Follow-up inside a thread | Reuses bounded, expiring thread context |
+| `/afk channel:<voice>` | Saves and joins one AFK voice channel for the current guild |
 | Verification wording | Produces an explicit verdict with evidence and uncertainty |
 | Comparison wording | Searches each named target separately and explains practical trade-offs |
 
@@ -255,12 +270,20 @@ Build and run both non-root Docker targets:
 docker compose up -d --build
 ```
 
+For Railway persistence across deployments, mount a Volume at `/app/data` on the bot service and set:
+
+```text
+AFK_STATE_PATH=/app/data/afk-guilds.json
+```
+
+Without a persistent volume, AFK state survives ordinary process restarts only while the container filesystem remains available.
+
 The Docker build installs the frozen lockfile, builds the workspace, and deploys pruned production packages for the bot and API.
 
 ## Current Boundaries
 
 - Thread memory is process-local and is lost on restart.
-- There is no database, queue, persistent user profile, guild settings UI, or usage dashboard.
+- AFK guild configuration uses a small JSON state file; there is no database, queue, persistent user profile, guild settings UI, or usage dashboard.
 - The API currently exposes operational health endpoints only.
 - Search and social extraction depend on the configured 9Router routes.
 - Attachment MIME types and filename extensions are treated as hints, not proof of content type.

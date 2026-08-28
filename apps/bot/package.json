@@ -17,6 +17,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
+    "@discordjs/voice": "^0.19.2",
     "@replai/config": "workspace:*",
     "@replai/core": "workspace:*",
     "discord.js": "^14.27.0",

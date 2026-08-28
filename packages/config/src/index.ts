@@ -20,6 +20,7 @@ const optionalEnvironmentNumber = z.preprocess(
 const botEnvironmentSchema = commonSchema.extend({
   DISCORD_TOKEN: z.string().trim().min(1, 'is required'),
   DISCORD_CLIENT_ID: z.string().trim().regex(/^\d+$/, 'must be a Discord snowflake'),
+  AFK_STATE_PATH: z.string().trim().min(1).default('data/afk-guilds.json'),
   AI_BASE_URL: z.url().refine((value) => value.startsWith('http://') || value.startsWith('https://'), {
     message: 'must use HTTP or HTTPS',
   }),
@@ -46,6 +47,7 @@ export interface CommonConfig {
 export interface BotConfig extends CommonConfig {
   discordToken: string;
   discordClientId: string;
+  afkStatePath: string;
   ai: {
     baseUrl: string;
     apiKey: string;
@@ -85,6 +87,7 @@ export function loadBotConfig(): BotConfig {
     logLevel: environment.LOG_LEVEL,
     discordToken: environment.DISCORD_TOKEN,
     discordClientId: environment.DISCORD_CLIENT_ID,
+    afkStatePath: environment.AFK_STATE_PATH,
     ai: {
       baseUrl: environment.AI_BASE_URL,
       apiKey: environment.AI_API_KEY,
