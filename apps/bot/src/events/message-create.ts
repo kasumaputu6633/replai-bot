@@ -1,7 +1,7 @@
 import {
   assessResearchQuestion,
+  buildResearchGuardRefusal,
   research,
-  RESEARCH_SCOPE_REFUSAL,
   type ResearchInput,
   type ResearchProvider,
   type SourceContext,
@@ -87,6 +87,12 @@ function buildResearchInput(
       sourceMessageId: source.messageId,
       queryMessageId: message.id,
       userId: message.author.id,
+      speakerName:
+        message.member?.displayName ??
+        message.author.displayName ??
+        message.author.globalName ??
+        message.author.username ??
+        message.author.id,
     },
   };
 }
@@ -148,7 +154,11 @@ export async function handleMessageCreate(
       },
       'Research request blocked by input guard',
     );
-    await replySafely(message, RESEARCH_SCOPE_REFUSAL, dependencies.logger);
+    await replySafely(
+      message,
+      buildResearchGuardRefusal(question, guardDecision.reason),
+      dependencies.logger,
+    );
     return;
   }
 
@@ -195,6 +205,12 @@ export async function handleMessageCreate(
         {
           messageId: message.id,
           authorId: message.author.id,
+          authorName:
+            message.member?.displayName ??
+            message.author.displayName ??
+            message.author.globalName ??
+            message.author.username ??
+            message.author.id,
           role: 'user',
           text: question,
           createdAt: new Date(message.createdTimestamp).toISOString(),
@@ -202,6 +218,12 @@ export async function handleMessageCreate(
         {
           messageId: assistantMessage.id,
           authorId: assistantMessage.author.id,
+          authorName:
+            assistantMessage.member?.displayName ??
+            assistantMessage.author.displayName ??
+            assistantMessage.author.globalName ??
+            assistantMessage.author.username ??
+            assistantMessage.author.id,
           role: 'assistant',
           text: result.content,
           createdAt: new Date(assistantMessage.createdTimestamp).toISOString(),

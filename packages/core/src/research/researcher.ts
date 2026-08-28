@@ -1,5 +1,5 @@
 import type { ResearchProvider } from '../ai/provider.js';
-import { assessResearchQuestion, RESEARCH_SCOPE_REFUSAL } from '../security/guard.js';
+import { assessResearchQuestion, buildResearchGuardRefusal } from '../security/guard.js';
 import { researchInputSchema } from './schemas.js';
 import type { ResearchInput, ResearchResult } from './types.js';
 
@@ -11,7 +11,9 @@ export async function research(
   const guardDecision = assessResearchQuestion(validatedInput.question);
 
   if (!guardDecision.allowed) {
-    return { content: RESEARCH_SCOPE_REFUSAL };
+    return {
+      content: buildResearchGuardRefusal(validatedInput.question, guardDecision.reason),
+    };
   }
 
   return provider.research(validatedInput);

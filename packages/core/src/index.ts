@@ -1,6 +1,11 @@
 export { OpenAICompatibleResearchProvider } from './ai/openai-compatible.js';
 export type { ResearchProvider } from './ai/provider.js';
-export { REPLAI_SYSTEM_PROMPT, buildResearchPrompt } from './ai/prompts.js';
+export {
+  buildConversationPrompt,
+  buildReplaiSystemPrompt,
+  buildResearchPrompt,
+  REPLAI_SYSTEM_PROMPT,
+} from './ai/prompts.js';
 export type {
   OpenAICompatibleProviderConfig,
   WebFetchResult,
@@ -19,6 +24,7 @@ export {
 } from './context/limits.js';
 export type {
   SourceAttachment,
+  SourceAuthor,
   SourceContext,
   SourceEmbed,
   SourceImage,
@@ -61,6 +67,7 @@ export {
   researchInputSchema,
   researchModeSchema,
   researchTurnSchema,
+  sourceAuthorSchema,
   sourceContextSchema,
 } from './research/schemas.js';
 export type {
@@ -72,6 +79,7 @@ export type {
 } from './research/types.js';
 export {
   assessResearchQuestion,
+  buildResearchGuardRefusal,
   guardResearchOutput,
   isResearchRefusal,
   RESEARCH_SCOPE_REFUSAL,

@@ -32,10 +32,10 @@ function turn(index: number, text = `turn ${index}`): ThreadMemoryTurn {
 
 describe('ThreadMemoryStore', () => {
   it('exports the requested production defaults', () => {
-    expect(DEFAULT_THREAD_MEMORY_TTL_MS).toBe(15 * 60 * 1_000);
+    expect(DEFAULT_THREAD_MEMORY_TTL_MS).toBe(60 * 60 * 1_000);
     expect(DEFAULT_MAX_THREAD_MEMORY_CONVERSATIONS).toBe(500);
-    expect(DEFAULT_MAX_THREAD_MEMORY_TURNS).toBe(8);
-    expect(DEFAULT_MAX_THREAD_MEMORY_CHARACTERS).toBe(12_000);
+    expect(DEFAULT_MAX_THREAD_MEMORY_TURNS).toBe(12);
+    expect(DEFAULT_MAX_THREAD_MEMORY_CHARACTERS).toBe(20_000);
   });
 
   it('stores the original source and returns defensive snapshots', () => {

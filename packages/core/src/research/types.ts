@@ -5,6 +5,8 @@ export type ResearchMode = 'answer' | 'verify' | 'compare';
 export interface ResearchTurn {
   role: 'user' | 'assistant';
   content: string;
+  speakerId?: string | undefined;
+  speakerName?: string | undefined;
 }
 
 export interface ResearchMetadata {
@@ -13,6 +15,7 @@ export interface ResearchMetadata {
   sourceMessageId?: string | undefined;
   queryMessageId?: string | undefined;
   userId?: string | undefined;
+  speakerName?: string | undefined;
 }
 
 export interface ResearchInput {

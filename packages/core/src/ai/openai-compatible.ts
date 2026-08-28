@@ -1,5 +1,8 @@
 import OpenAI from 'openai';
-import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
+import type {
+  ChatCompletionContentPart,
+  ChatCompletionMessageParam,
+} from 'openai/resources/chat/completions';
 import { ResearchProviderError } from '../errors/index.js';
 import { buildResearchPlan } from '../research/intent.js';
 import {
@@ -19,10 +22,10 @@ import type { ResearchInput, ResearchResult } from '../research/types.js';
 import { guardResearchOutput, isResearchRefusal } from '../security/guard.js';
 import type { ResearchProvider } from './provider.js';
 import {
-  buildCasualPrompt,
+  buildConversationPrompt,
+  buildReplaiSystemPrompt,
   buildResearchPrompt,
   buildResponseRepairPrompt,
-  REPLAI_SYSTEM_PROMPT,
 } from './prompts.js';
 import type { OpenAICompatibleProviderConfig } from './types.js';
 import {
@@ -39,6 +42,8 @@ import {
 export class OpenAICompatibleResearchProvider implements ResearchProvider {
   readonly #client: OpenAI;
   readonly #model: string;
+  readonly #systemPrompt: string;
+  readonly #temperature: number | undefined;
   readonly #webFetch: NineRouterWebFetchClient | undefined;
   readonly #webSearch: NineRouterWebSearchClient | undefined;
 
@@ -50,6 +55,11 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
       defaultHeaders: { 'User-Agent': 'Replai/0.1.0' },
     });
     this.#model = config.model;
+    this.#systemPrompt = buildReplaiSystemPrompt({
+      model: config.publicModelName ?? config.model,
+      ownerName: config.ownerName,
+    });
+    this.#temperature = config.temperature;
     this.#webFetch = config.webFetchModel
       ? new NineRouterWebFetchClient({
           apiKey: config.apiKey,
@@ -73,7 +83,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
     try {
       const plan = buildResearchPlan(validatedInput);
       const mode = plan.mode;
-      const isCasualConversation = plan.interaction === 'casual';
+      const isConversation = plan.interaction === 'conversation';
       const sources = [
         validatedInput.source,
         ...(validatedInput.comparisonSources ?? []),
@@ -116,15 +126,15 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
         result.status === 'fulfilled' ? [result.value] : [],
       );
       const evidenceCatalog = buildTrustedEvidenceCatalog({
-        sources: isCasualConversation ? [] : sources,
+        sources: isConversation ? [] : sources,
         targetedSearchResults: targetedWebSearchResults,
         fetchedPages: webFetchResults,
       });
       const content: ChatCompletionContentPart[] = [
         {
           type: 'text',
-          text: isCasualConversation
-            ? buildCasualPrompt(validatedInput)
+          text: isConversation
+            ? buildConversationPrompt(validatedInput)
             : buildResearchPrompt(
                 validatedInput,
                 webSearchResults,
@@ -154,8 +164,16 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
           : content;
         const completion = await this.#client.chat.completions.create({
           model: this.#model,
+          ...(this.#temperature === undefined ? {} : { temperature: this.#temperature }),
           messages: [
-            { role: 'system', content: REPLAI_SYSTEM_PROMPT },
+            { role: 'system', content: this.#systemPrompt },
+            ...(validatedInput.context ?? []).map<ChatCompletionMessageParam>((turn) => ({
+              role: turn.role,
+              content:
+                turn.role === 'user' && turn.speakerName
+                  ? `[${turn.speakerName}]: ${turn.content}`
+                  : turn.content,
+            })),
             { role: 'user', content: attemptContent },
           ],
         });
@@ -194,7 +212,7 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
           return {
             content:
               guarded === evidenced && !isResearchRefusal(guarded)
-                ? appendTrustedSources(guarded, isCasualConversation ? [] : evidenceCatalog)
+                ? appendTrustedSources(guarded, isConversation ? [] : evidenceCatalog)
                 : guarded,
           };
         }

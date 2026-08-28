@@ -35,8 +35,15 @@ export const sourceEmbedSchema = z.object({
   author: optionalNonEmptyString,
 });
 
+export const sourceAuthorSchema = z.object({
+  id: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(100),
+  bot: z.boolean().optional(),
+});
+
 export const sourceContextSchema = z.object({
   messageId: z.string().trim().min(1),
+  author: sourceAuthorSchema.optional(),
   text: z.string().max(MAX_SOURCE_TEXT_LENGTH).nullable(),
   urls: z.array(z.url()).max(MAX_URLS),
   images: z.array(sourceImageSchema).max(MAX_IMAGES),
@@ -49,6 +56,8 @@ export const researchModeSchema = z.enum(['answer', 'verify', 'compare']);
 export const researchTurnSchema = z.object({
   role: z.enum(['user', 'assistant']),
   content: z.string().trim().min(1).max(MAX_RESEARCH_TURN_LENGTH),
+  speakerId: optionalNonEmptyString,
+  speakerName: z.string().trim().min(1).max(100).optional(),
 });
 
 export const researchInputSchema = z.object({
@@ -64,6 +73,7 @@ export const researchInputSchema = z.object({
       sourceMessageId: optionalNonEmptyString,
       queryMessageId: optionalNonEmptyString,
       userId: optionalNonEmptyString,
+      speakerName: z.string().trim().min(1).max(100).optional(),
     })
     .optional(),
 });

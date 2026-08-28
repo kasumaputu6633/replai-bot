@@ -8,6 +8,15 @@ const commonSchema = z.object({
     .default('info'),
 });
 
+const optionalEnvironmentString = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().trim().min(1).optional(),
+);
+const optionalEnvironmentNumber = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.coerce.number().min(0).max(2).optional(),
+);
+
 const botEnvironmentSchema = commonSchema.extend({
   DISCORD_TOKEN: z.string().trim().min(1, 'is required'),
   DISCORD_CLIENT_ID: z.string().trim().regex(/^\d+$/, 'must be a Discord snowflake'),
@@ -16,6 +25,9 @@ const botEnvironmentSchema = commonSchema.extend({
   }),
   AI_API_KEY: z.string().trim().min(1, 'is required'),
   AI_MODEL: z.string().trim().min(1, 'is required'),
+  AI_PUBLIC_MODEL_NAME: optionalEnvironmentString,
+  AI_TEMPERATURE: optionalEnvironmentNumber,
+  BOT_OWNER_NAME: z.string().trim().min(1).default('Nando Ganteng'),
   AI_WEB_SEARCH_MODEL: z.string().trim().min(1).default('exa'),
   AI_WEB_SEARCH_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
   AI_WEB_FETCH_MODEL: z.string().trim().min(1).default('exa'),
@@ -38,6 +50,9 @@ export interface BotConfig extends CommonConfig {
     baseUrl: string;
     apiKey: string;
     model: string;
+    publicModelName?: string | undefined;
+    temperature?: number | undefined;
+    ownerName: string;
     webSearchModel: string;
     webSearchMaxResults: number;
     webFetchModel: string;
@@ -74,6 +89,9 @@ export function loadBotConfig(): BotConfig {
       baseUrl: environment.AI_BASE_URL,
       apiKey: environment.AI_API_KEY,
       model: environment.AI_MODEL,
+      publicModelName: environment.AI_PUBLIC_MODEL_NAME,
+      temperature: environment.AI_TEMPERATURE,
+      ownerName: environment.BOT_OWNER_NAME,
       webSearchModel: environment.AI_WEB_SEARCH_MODEL,
       webSearchMaxResults: environment.AI_WEB_SEARCH_MAX_RESULTS,
       webFetchModel: environment.AI_WEB_FETCH_MODEL,

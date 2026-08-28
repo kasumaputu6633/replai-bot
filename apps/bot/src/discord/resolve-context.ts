@@ -10,6 +10,7 @@ export type DiscordContextRole = 'user' | 'assistant' | 'participant';
 export interface DiscordContextTurn {
   messageId: string;
   authorId: string;
+  authorName: string;
   role: DiscordContextRole;
   text: string;
   createdAt: string;
@@ -40,6 +41,16 @@ function roleFor(message: Message, options: ResolveDiscordContextOptions): Disco
   return 'participant';
 }
 
+function authorNameFor(message: Message): string {
+  return (
+    message.member?.displayName ??
+    message.author.displayName ??
+    message.author.globalName ??
+    message.author.username ??
+    message.author.id
+  ).slice(0, 100);
+}
+
 function compactMessages(
   messages: readonly Message[],
   options: ResolveDiscordContextOptions,
@@ -57,6 +68,7 @@ function compactMessages(
     turns.push({
       messageId: message.id,
       authorId: message.author.id,
+      authorName: authorNameFor(message),
       role: roleFor(message, options),
       text: boundedText,
       createdAt: new Date(message.createdTimestamp).toISOString(),

@@ -21,8 +21,15 @@ export interface SourceEmbed {
   author?: string | undefined;
 }
 
+export interface SourceAuthor {
+  id: string;
+  name: string;
+  bot?: boolean | undefined;
+}
+
 export interface SourceContext {
   messageId: string;
+  author?: SourceAuthor | undefined;
   text: string | null;
   urls: string[];
   images: SourceImage[];

@@ -12,26 +12,9 @@ export function hasRequiredModeStructure(
   comparisonTargetCount = 0,
 ): boolean {
   // Retain the argument for callers compiled against the previous comparison contract.
+  void mode;
   void comparisonTargetCount;
-  if (mode === 'answer' || mode === 'compare') {
-    return true;
-  }
-
-  const requiredHeadingGroups = [
-    ['Verdict', 'Kesimpulan'],
-    ['Evidence', 'Bukti'],
-    ['Confidence', 'Tingkat Keyakinan'],
-    ['Limitations', 'Batasan'],
-  ];
-
-  return requiredHeadingGroups.every((headings) =>
-    headings.some((heading) =>
-      new RegExp(
-        `^(?:#{1,6}\\s*)?(?:\\*\\*)?${heading}(?:\\s*\\([^)]*\\))?(?::(?:\\*\\*)?|(?:\\*\\*)?:)\\s*`,
-        'imu',
-      ).test(content),
-    ),
-  );
+  return content.trim().length > 0;
 }
 
 export function researchTargetLabel(source: SourceContext, index: number): string {
@@ -81,14 +64,6 @@ export function ensureResearchModeStructure(
 ): string {
   if (hasRequiredModeStructure(content, mode, comparisonTargetCount)) {
     return content;
-  }
-
-  if (mode === 'verify') {
-    const hasExistingSections = /^(?:#{1,6}\s*)?(?:\*\*)?(?:Verdict|Kesimpulan|Evidence|Bukti|Confidence|Tingkat Keyakinan|Limitations|Batasan)\b/imu.test(
-      content,
-    );
-    if (hasExistingSections) return content;
-    return `Verdict: Tidak cukup bukti.\n\nEvidence: ${content}\n\nConfidence: Rendah.\n\nLimitations: Respons penyedia tidak menghasilkan struktur verifikasi yang lengkap, jadi kesimpulan tegas tidak dapat diberikan.`;
   }
 
   return content;

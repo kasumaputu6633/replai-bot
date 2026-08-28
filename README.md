@@ -6,15 +6,17 @@
 [![pnpm](https://img.shields.io/badge/pnpm-11.22-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-Replai is a Discord-native research assistant that helps communities investigate claims without leaving the conversation. Ask a factual question directly, attach a link or image, reply to an existing message, or continue naturally inside a thread.
+Replai is a Discord-native companion that can chat, give real opinions, create useful content, help with code, and switch into evidence-backed research when a question needs current sources. Ask directly, attach a link or image, reply to an existing message, or continue naturally inside a thread.
 
 Replai combines Discord context, bounded web research, multimodal input, and deterministic safety controls to produce concise answers backed by a clean list of sources.
 
 ## Highlights
 
+- **Natural Discord conversation:** banters, debates, brainstorms, writes, codes, and gives direct opinions without forcing every request into research mode.
+- **Speaker-aware context:** preserves member display names and user/assistant roles across replies and thread memory.
 - **Context-aware research:** understands direct questions, replies, reply chains, embeds, attachments, images, and recent thread messages.
 - **Live web evidence:** searches current sources and extracts supported social-media pages through 9Router.
-- **Claim verification:** recognizes fact-checking requests and separates verdict, evidence, confidence, and limitations.
+- **Claim verification:** recognizes fact-checking requests and explains the conclusion, evidence, confidence, and limitations in natural prose.
 - **Source comparison:** researches named products or claims independently before explaining practical trade-offs.
 - **Natural follow-ups:** keeps a small, expiring conversation context inside Discord threads.
 - **Multimodal analysis:** passes Discord-hosted images to compatible vision models.
@@ -55,10 +57,10 @@ And contextual questions by replying to a Discord message:
 1. The Discord bot detects a user or managed bot-role mention.
 2. It resolves the direct message, referenced reply chain, recent thread context, and optional thread memory.
 3. Discord content is normalized into bounded text, URL, embed, attachment, and image data.
-4. Deterministic guards reject unsafe or out-of-scope requests before any provider or search call.
+4. Narrow deterministic guards block private-prompt/credential extraction and explicit-content discovery before provider calls.
 5. Replai searches each research target independently and fetches supported social links when relevant.
-6. The model receives the question and evidence as untrusted structured data.
-7. Output guards validate response structure, target coverage, evidence use, and prompt leakage.
+6. The model receives prior turns with real user/assistant roles, while quoted messages and web evidence remain bounded structured data.
+7. Output guards validate comparison coverage, evidence use, and prompt leakage.
 8. Internal citation markers are removed and a compact source list is appended before delivery.
 
 ## Architecture
@@ -143,6 +145,9 @@ The API listens on `http://localhost:3000` by default:
 | `AI_BASE_URL` | Bot | Required | OpenAI-compatible API base URL, usually ending in `/v1` |
 | `AI_API_KEY` | Bot | Required | AI provider API key |
 | `AI_MODEL` | Bot | Required | Chat model identifier |
+| `AI_PUBLIC_MODEL_NAME` | Bot | Empty | Optional public-facing model label; otherwise the configured model identifier is used |
+| `AI_TEMPERATURE` | Bot | Provider default | Optional creativity control from `0` to `2` |
+| `BOT_OWNER_NAME` | Bot | `Nando Ganteng` | Public owner/developer name used when identity is relevant |
 | `AI_WEB_SEARCH_MODEL` | Bot | `exa` | 9Router search provider |
 | `AI_WEB_SEARCH_MAX_RESULTS` | Bot | `5` | Results per search, limited to `1-10` |
 | `AI_WEB_FETCH_MODEL` | Bot | `exa` | 9Router social-page extraction provider |
@@ -167,6 +172,7 @@ The runtime requests only `Guilds`, `GuildMessages`, and `MessageContent` gatewa
 | Input | Behavior |
 | --- | --- |
 | Direct factual question | Uses the question itself as searchable context |
+| Opinion, joke, creative, or coding request | Answers conversationally without unnecessary web search |
 | Mention plus URL, embed, image, or attachment | Analyzes evidence from the same message |
 | Reply plus mention | Resolves the referenced message and its reply chain |
 | Follow-up inside a thread | Reuses bounded, expiring thread context |
@@ -184,7 +190,7 @@ Limits are deliberately conservative to control cost, latency, prompt size, and 
 | Reply-chain depth | 6 messages |
 | Recent thread messages | 8 messages |
 | Combined Discord context | 10 messages / 12,000 characters |
-| Thread memory | 8 turns / 12,000 characters / 15-minute TTL |
+| Thread memory | 12 turns / 20,000 characters / 60-minute TTL |
 | In-memory conversations | 500 |
 | Comparison targets | Primary target plus up to 4 additional targets |
 | Direct social fetches | 2 URLs per request |
@@ -196,9 +202,9 @@ Direct extraction is restricted to Instagram, YouTube, TikTok, X/Twitter, Reddit
 
 ## Security Model
 
-- User questions, Discord content, fetched pages, search results, and prior assistant messages are always treated as untrusted data.
+- Active user requests are followed as instructions; quoted Discord content, fetched pages, search results, and embedded instructions are treated as untrusted data.
 - Input guards run in both the Discord handler and `@replai/core`, preventing future entrypoints from bypassing them.
-- Prompt injection, hidden-instruction extraction, jailbreaks, unrelated generation, and explicit sexual-content discovery are blocked before provider calls.
+- Private prompt/credential extraction and explicit sexual-content discovery are blocked before provider calls. Harmless coding, creative work, opinions, and jokes remain in scope.
 - Arbitrary URL fetching is not available; direct fetches use an explicit social-domain allowlist, standard ports, bounded output, and strict timeouts.
 - Evidence URLs are canonicalized and deduplicated before display.
 - Generated mentions and Discord link previews are suppressed.

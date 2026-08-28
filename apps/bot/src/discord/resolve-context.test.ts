@@ -98,6 +98,7 @@ describe('resolveDiscordContext', () => {
       {
         messageId: '1',
         authorId: 'participant',
+        authorName: 'participant',
         role: 'participant',
         text: 'source',
         createdAt: new Date(1).toISOString(),
@@ -105,6 +106,7 @@ describe('resolveDiscordContext', () => {
       {
         messageId: '2',
         authorId: 'bot',
+        authorName: 'bot',
         role: 'assistant',
         text: 'answer',
         createdAt: new Date(2).toISOString(),
@@ -112,6 +114,7 @@ describe('resolveDiscordContext', () => {
       {
         messageId: '3',
         authorId: 'querying-user',
+        authorName: 'querying-user',
         role: 'user',
         text: 'follow-up',
         createdAt: new Date(3).toISOString(),

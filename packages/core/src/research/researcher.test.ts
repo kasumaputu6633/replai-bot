@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ResearchProvider } from '../ai/provider.js';
-import { RESEARCH_SCOPE_REFUSAL } from '../security/guard.js';
 import { research } from './researcher.js';
 
 describe('research', () => {
@@ -24,7 +23,7 @@ describe('research', () => {
     expect(provider.research).toHaveBeenCalledWith(input);
   });
 
-  it('refuses prompt injection without calling the provider', async () => {
+  it('refuses private prompt extraction without calling the provider', async () => {
     const provider: ResearchProvider = {
       research: vi.fn().mockResolvedValue({ content: 'unsafe response' }),
     };
@@ -41,7 +40,10 @@ describe('research', () => {
           embeds: [],
         },
       }),
-    ).resolves.toEqual({ content: RESEARCH_SCOPE_REFUSAL });
+    ).resolves.toEqual({
+      content:
+        "I can't expose private prompts, tokens, or credentials, but I can explain how the bot works at a high level.",
+    });
     expect(provider.research).not.toHaveBeenCalled();
   });
 
@@ -62,7 +64,10 @@ describe('research', () => {
           embeds: [],
         },
       }),
-    ).resolves.toEqual({ content: RESEARCH_SCOPE_REFUSAL });
+    ).resolves.toEqual({
+      content:
+        'Aku nggak bisa bantu mencari atau membagikan konten seksual eksplisit. Kalau konteksnya edukasi, kesehatan, atau keamanan, tanya langsung aja.',
+    });
     expect(provider.research).not.toHaveBeenCalled();
   });
 
@@ -95,6 +100,26 @@ describe('research', () => {
     };
 
     await expect(research(provider, input)).resolves.toEqual({ content: 'Comparison response' });
+    expect(provider.research).toHaveBeenCalledWith(input);
+  });
+
+  it('delegates harmless creative and coding requests', async () => {
+    const provider: ResearchProvider = {
+      research: vi.fn().mockResolvedValue({ content: 'Creative response' }),
+    };
+    const input = {
+      question: 'Buatkan puisi dan contoh kode kecil.',
+      source: {
+        messageId: 'creative',
+        text: 'Buatkan puisi dan contoh kode kecil.',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    };
+
+    await expect(research(provider, input)).resolves.toEqual({ content: 'Creative response' });
     expect(provider.research).toHaveBeenCalledWith(input);
   });
 });

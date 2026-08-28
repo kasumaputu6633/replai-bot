@@ -7,6 +7,7 @@ import {
   MAX_SOURCE_TEXT_LENGTH,
   MAX_URLS,
   type SourceAttachment,
+  type SourceAuthor,
   type SourceContext,
   type SourceEmbed,
   type SourceImage,
@@ -38,6 +39,7 @@ export interface DiscordMessageContentData {
 
 export interface DiscordMessageData extends DiscordMessageContentData {
   id: string;
+  author?: SourceAuthor | undefined;
   snapshots?: readonly DiscordMessageContentData[] | undefined;
 }
 
@@ -137,6 +139,7 @@ export function normalizeMessageData(data: DiscordMessageData): SourceContext {
 
   return {
     messageId: data.id,
+    ...(data.author ? { author: data.author } : {}),
     text,
     urls: extractHttpUrls(text, ...embedValues).slice(0, MAX_URLS),
     images,
@@ -168,9 +171,20 @@ function mapDiscordContent(message: Message | MessageSnapshot): DiscordMessageCo
 
 export function normalizeDiscordMessage(message: Message): SourceContext {
   const snapshots = [...message.messageSnapshots.values()].map(mapDiscordContent);
+  const authorName =
+    message.member?.displayName ??
+    message.author.displayName ??
+    message.author.globalName ??
+    message.author.username ??
+    message.author.id;
 
   return normalizeMessageData({
     id: message.id,
+    author: {
+      id: message.author.id,
+      name: authorName.slice(0, 100),
+      bot: message.author.bot,
+    },
     ...mapDiscordContent(message),
     ...(snapshots.length > 0 ? { snapshots } : {}),
   });

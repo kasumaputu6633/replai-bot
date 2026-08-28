@@ -26,7 +26,7 @@ describe('buildResearchPlan', () => {
   ])('keeps screenshot-derived banter and jokes source-free: %s', (question, options) => {
     expect(buildResearchPlan(input(question, options))).toEqual({
       mode: 'answer',
-      interaction: 'casual',
+      interaction: 'conversation',
       search: 'none',
       fetchSourceUrls: false,
     });
@@ -50,5 +50,40 @@ describe('buildResearchPlan', () => {
       fetchSourceUrls: true,
     });
     expect(buildResearchPlan(input('jelaskan pendapat ini')).search).toBe('none');
+  });
+
+  it.each([
+    'buatkan puisi pendek tentang server ini',
+    'bantu bikin fungsi TypeScript sederhana',
+    'menurut lu argumen ini masuk akal gak? bahas detail',
+  ])('keeps harmless creative, coding, and opinion requests conversational: %s', (question) => {
+    expect(buildResearchPlan(input(question))).toMatchObject({
+      interaction: 'conversation',
+      search: 'none',
+    });
+  });
+
+  it('lets explicit research override an opinion phrase', () => {
+    expect(buildResearchPlan(input('menurut lu ini benar gak? cari sumber resminya'))).toMatchObject({
+      interaction: 'research',
+      search: 'single',
+    });
+  });
+
+  it('researches a linked article before giving an opinion about it', () => {
+    expect(
+      buildResearchPlan(input('menurut lu artikel ini bagus gak?', { url: 'https://example.com' })),
+    ).toMatchObject({
+      interaction: 'research',
+      search: 'single',
+      fetchSourceUrls: true,
+    });
+  });
+
+  it('recognizes English source-finding requests', () => {
+    expect(buildResearchPlan(input('find the original source for this claim'))).toMatchObject({
+      interaction: 'research',
+      search: 'single',
+    });
   });
 });

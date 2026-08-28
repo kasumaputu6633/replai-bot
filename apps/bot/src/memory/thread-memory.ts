@@ -1,15 +1,16 @@
 import type { SourceContext } from '@replai/core';
 
-export const DEFAULT_THREAD_MEMORY_TTL_MS = 15 * 60 * 1_000;
+export const DEFAULT_THREAD_MEMORY_TTL_MS = 60 * 60 * 1_000;
 export const DEFAULT_MAX_THREAD_MEMORY_CONVERSATIONS = 500;
-export const DEFAULT_MAX_THREAD_MEMORY_TURNS = 8;
-export const DEFAULT_MAX_THREAD_MEMORY_CHARACTERS = 12_000;
+export const DEFAULT_MAX_THREAD_MEMORY_TURNS = 12;
+export const DEFAULT_MAX_THREAD_MEMORY_CHARACTERS = 20_000;
 
 export type ThreadMemoryRole = 'user' | 'assistant';
 
 export interface ThreadMemoryTurn {
   messageId: string;
   authorId: string;
+  authorName?: string | undefined;
   role: ThreadMemoryRole;
   text: string;
   createdAt: string;

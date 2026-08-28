@@ -2,6 +2,9 @@ export interface OpenAICompatibleProviderConfig {
   apiKey: string;
   baseURL: string;
   model: string;
+  publicModelName?: string | undefined;
+  ownerName?: string | undefined;
+  temperature?: number | undefined;
   webSearchModel?: string | undefined;
   webSearchMaxResults?: number | undefined;
   webFetchModel?: string | undefined;

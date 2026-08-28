@@ -27,7 +27,14 @@ function turn(
   createdAt: number,
   text = messageId,
 ): ResearchContextTurn {
-  return { messageId, role, text, createdAt: new Date(createdAt).toISOString() };
+  return {
+    messageId,
+    authorId: `${role}-${messageId}`,
+    authorName: role === 'assistant' ? 'Replai' : `Member ${messageId}`,
+    role,
+    text,
+    createdAt: new Date(createdAt).toISOString(),
+  };
 }
 
 describe('parseResearchRequest', () => {
@@ -46,8 +53,13 @@ describe('parseResearchRequest', () => {
 
     expect(input.mode).toBe('answer');
     expect(input.context).toHaveLength(MAX_RESEARCH_TURNS);
-    expect(input.context).not.toContainEqual({ role: 'user', content: 'must not be duplicated' });
-    expect(input.context?.at(-1)).toEqual({ role: 'assistant', content: 'newest duplicate' });
+    expect(input.context?.some((item) => item.content === 'must not be duplicated')).toBe(false);
+    expect(input.context?.at(-1)).toEqual({
+      role: 'assistant',
+      content: 'newest duplicate',
+      speakerId: 'assistant-message-9',
+      speakerName: 'Replai',
+    });
     expect(input).not.toHaveProperty('comparisonSources');
   });
 
@@ -60,7 +72,12 @@ describe('parseResearchRequest', () => {
 
     expect(input.mode).toBe('verify');
     expect(input.context).toEqual([
-      { role: 'user', content: 'x'.repeat(MAX_RESEARCH_TURN_LENGTH) },
+      {
+        role: 'user',
+        content: 'x'.repeat(MAX_RESEARCH_TURN_LENGTH),
+        speakerId: 'participant-participant',
+        speakerName: 'Member participant',
+      },
     ]);
   });
 

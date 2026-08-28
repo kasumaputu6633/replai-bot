@@ -31,16 +31,11 @@ describe('research modes', () => {
     expect(resolveResearchMode(input('Explain this'))).toBe('answer');
   });
 
-  it('requires and safely supplies explicit verification sections', () => {
+  it('keeps natural verification prose unchanged', () => {
     const content = ensureResearchModeStructure('The claim lacks support [1].', 'verify');
 
     expect(hasRequiredModeStructure(content, 'verify')).toBe(true);
-    expect(content).toContain('Verdict:');
-    expect(content).toContain('Tidak cukup bukti');
-    expect(content).toContain('Evidence:');
-    expect(content).toContain('Confidence:');
-    expect(content).toContain('Rendah');
-    expect(content).toContain('Limitations:');
+    expect(content).toBe('The claim lacks support [1].');
   });
 
   it('accepts bilingual verification headings without wrapping them again', () => {
@@ -49,6 +44,10 @@ describe('research modes', () => {
 
     expect(hasRequiredModeStructure(draft, 'verify')).toBe(true);
     expect(ensureResearchModeStructure(draft, 'verify')).toBe(draft);
+  });
+
+  it('rejects only an empty provider response structurally', () => {
+    expect(hasRequiredModeStructure('   ', 'verify')).toBe(false);
   });
 
   it('keeps comparison prose natural without requiring report headings', () => {

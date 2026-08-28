@@ -63,9 +63,11 @@ export function buildWebSearchQuery(input: ResearchInput, now = new Date()): str
   return context.slice(0, MAX_SEARCH_QUERY_LENGTH);
 }
 
-export function isCasualConversationInput(input: ResearchInput): boolean {
-  return buildResearchPlan(input).interaction === 'casual';
+export function isConversationInput(input: ResearchInput): boolean {
+  return buildResearchPlan(input).interaction === 'conversation';
 }
+
+export const isCasualConversationInput = isConversationInput;
 
 export function hasSearchableWebContext(input: ResearchInput): boolean {
   return buildResearchPlan(input).search !== 'none';
