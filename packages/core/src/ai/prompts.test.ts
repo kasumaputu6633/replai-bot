@@ -214,7 +214,9 @@ describe('Replai system prompt', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('Track who said what');
     expect(REPLAI_SYSTEM_PROMPT).toContain('labeled avatar images');
     expect(REPLAI_SYSTEM_PROMPT).toContain('one compact paragraph');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('do not put every sentence on a new line');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('natural WhatsApp or Discord chat');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('avoid em dashes');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Do not put every sentence on a new line');
   });
 
   it('keeps evidence bounded without distrusting the active user', () => {

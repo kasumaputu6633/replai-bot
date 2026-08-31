@@ -17,5 +17,8 @@ export function compactConversationReply(content: string, request: string): stri
     return trimmed;
   }
 
-  return trimmed.replace(/[ \t]*\n+[ \t]*/gu, ' ').replace(/ {2,}/gu, ' ');
+  return trimmed
+    .replace(/\s*—\s*/gu, ', ')
+    .replace(/[ \t]*\n+[ \t]*/gu, ' ')
+    .replace(/ {2,}/gu, ' ');
 }

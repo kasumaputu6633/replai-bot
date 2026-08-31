@@ -13,12 +13,26 @@ describe('compactConversationReply', () => {
     );
   });
 
+  it('replaces em dashes in casual replies with chat-like punctuation', () => {
+    expect(
+      compactConversationReply(
+        'Iya sih — idenya bagus, tapi eksekusinya masih berantakan.',
+        'menurut lu gimana?',
+      ),
+    ).toBe('Iya sih, idenya bagus, tapi eksekusinya masih berantakan.');
+  });
+
   it.each([
     ['buatkan puisi', 'Langit diam\nMalam pulang\n\nAku menunggu'],
     ['kasih contoh code', '```ts\nconst answer = 42;\n```'],
     ['buat list singkat', '- satu\n- dua\n- tiga'],
   ])('preserves format-sensitive output for %s', (request, content) => {
     expect(compactConversationReply(content, request)).toBe(content);
+  });
+
+  it('preserves em dashes when the requested format needs exact text', () => {
+    const content = 'Langit — diam\nMalam pulang';
+    expect(compactConversationReply(content, 'buatkan puisi')).toBe(content);
   });
 
   it('keeps longer discussion paragraphs intact', () => {
