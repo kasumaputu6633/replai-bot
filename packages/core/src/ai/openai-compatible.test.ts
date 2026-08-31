@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { completionCreate } = vi.hoisted(() => ({
+const { completionCreate, openAIConfigs } = vi.hoisted(() => ({
   completionCreate: vi.fn(),
+  openAIConfigs: [] as unknown[],
 }));
 
 vi.mock('openai', () => ({
   default: class MockOpenAI {
+    public constructor(config: unknown) {
+      openAIConfigs.push(config);
+    }
+
     public readonly chat = {
       completions: {
         create: completionCreate,
@@ -19,9 +24,36 @@ import { OpenAICompatibleResearchProvider } from './openai-compatible.js';
 describe('OpenAICompatibleResearchProvider conversation messages', () => {
   beforeEach(() => {
     completionCreate.mockReset();
+    openAIConfigs.length = 0;
     completionCreate.mockResolvedValue({
       choices: [{ message: { content: 'Menurut gue, idenya bagus tapi eksekusinya ramai.' } }],
     });
+  });
+
+  it('configures the OpenAI-compatible client for xAI Grok', async () => {
+    const provider = new OpenAICompatibleResearchProvider({
+      apiKey: 'xai-key',
+      baseURL: 'https://api.x.ai/v1',
+      model: 'grok-4',
+    });
+
+    await provider.research({
+      question: 'halo',
+      source: {
+        messageId: 'source',
+        text: 'halo',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    expect(openAIConfigs[0]).toMatchObject({
+      apiKey: 'xai-key',
+      baseURL: 'https://api.x.ai/v1',
+    });
+    expect(completionCreate.mock.calls[0]?.[0]).toMatchObject({ model: 'grok-4' });
   });
 
   it('sends real multi-turn roles, speaker labels, identity, and creativity settings', async () => {

@@ -53,6 +53,66 @@ describe('conversation prompts', () => {
     expect(verify).toContain('Do not force headings');
     expect(compare).toContain('comparison targets');
   });
+
+  it('builds a temporary style profile only from the active speaker', () => {
+    const prompt = buildConversationPrompt({
+      question: 'menurut lu gimana, goblok?',
+      metadata: { userId: 'active', speakerName: 'Putu' },
+      context: [
+        {
+          role: 'user',
+          content: 'jawab yang jelas anjing',
+          speakerId: 'active',
+          speakerName: 'Putu',
+        },
+        {
+          role: 'user',
+          content: 'fuck fuck fuck',
+          speakerId: 'someone-else',
+          speakerName: 'Other',
+        },
+      ],
+      source: {
+        messageId: 'casual',
+        text: 'context',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    expect(prompt).toContain('"activeSpeakerCommunicationProfile"');
+    expect(prompt).toContain('"language": "Indonesian"');
+    expect(prompt).toContain('"profanityIntensity": "strong"');
+    expect(prompt).toContain('equally blunt, confrontational profanity');
+    expect(prompt).not.toContain('fuck fuck fuck');
+  });
+
+  it('does not inherit aggression from another channel participant', () => {
+    const prompt = buildConversationPrompt({
+      question: 'bisa bantu jelaskan ini?',
+      metadata: { userId: 'active', speakerName: 'Putu' },
+      context: [
+        {
+          role: 'user',
+          content: 'dasar anjing goblok',
+          speakerId: 'someone-else',
+          speakerName: 'Other',
+        },
+      ],
+      source: {
+        messageId: 'casual',
+        text: 'context',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    expect(prompt).toContain('"profanityIntensity": "none"');
+  });
 });
 
 describe('buildResearchPrompt', () => {
@@ -148,8 +208,9 @@ describe('Replai system prompt', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('You may disagree');
     expect(REPLAI_SYSTEM_PROMPT).toContain('Do not fake neutrality');
     expect(REPLAI_SYSTEM_PROMPT).toContain('allow longer thoughtful discussion');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('mirror roughly the same intensity');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('do not force profanity');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('equally blunt or profane comeback');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Do not force profanity');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('a mention alone is not hostility');
     expect(REPLAI_SYSTEM_PROMPT).toContain('Track who said what');
     expect(REPLAI_SYSTEM_PROMPT).toContain('labeled avatar images');
     expect(REPLAI_SYSTEM_PROMPT).toContain('one compact paragraph');

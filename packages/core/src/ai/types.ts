@@ -5,6 +5,8 @@ export interface OpenAICompatibleProviderConfig {
   publicModelName?: string | undefined;
   ownerName?: string | undefined;
   temperature?: number | undefined;
+  webApiKey?: string | undefined;
+  webBaseURL?: string | undefined;
   webSearchModel?: string | undefined;
   webSearchMaxResults?: number | undefined;
   webFetchModel?: string | undefined;

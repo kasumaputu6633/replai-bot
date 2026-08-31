@@ -16,6 +16,15 @@ const optionalEnvironmentNumber = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
   z.coerce.number().min(0).max(2).optional(),
 );
+const optionalEnvironmentUrl = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z
+    .url()
+    .refine((value) => value.startsWith('http://') || value.startsWith('https://'), {
+      message: 'must use HTTP or HTTPS',
+    })
+    .optional(),
+);
 
 const botEnvironmentSchema = commonSchema.extend({
   DISCORD_TOKEN: z.string().trim().min(1, 'is required'),
@@ -29,9 +38,11 @@ const botEnvironmentSchema = commonSchema.extend({
   AI_PUBLIC_MODEL_NAME: optionalEnvironmentString,
   AI_TEMPERATURE: optionalEnvironmentNumber,
   BOT_OWNER_NAME: z.string().trim().min(1).default('Nando Ganteng'),
-  AI_WEB_SEARCH_MODEL: z.string().trim().min(1).default('exa'),
+  WEB_BASE_URL: optionalEnvironmentUrl,
+  WEB_API_KEY: optionalEnvironmentString,
+  AI_WEB_SEARCH_MODEL: optionalEnvironmentString,
   AI_WEB_SEARCH_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
-  AI_WEB_FETCH_MODEL: z.string().trim().min(1).default('exa'),
+  AI_WEB_FETCH_MODEL: optionalEnvironmentString,
 });
 
 const apiEnvironmentSchema = commonSchema.extend({
@@ -55,9 +66,11 @@ export interface BotConfig extends CommonConfig {
     publicModelName?: string | undefined;
     temperature?: number | undefined;
     ownerName: string;
-    webSearchModel: string;
+    webBaseUrl?: string | undefined;
+    webApiKey?: string | undefined;
+    webSearchModel?: string | undefined;
     webSearchMaxResults: number;
-    webFetchModel: string;
+    webFetchModel?: string | undefined;
   };
 }
 
@@ -95,6 +108,8 @@ export function loadBotConfig(): BotConfig {
       publicModelName: environment.AI_PUBLIC_MODEL_NAME,
       temperature: environment.AI_TEMPERATURE,
       ownerName: environment.BOT_OWNER_NAME,
+      webBaseUrl: environment.WEB_BASE_URL,
+      webApiKey: environment.WEB_API_KEY,
       webSearchModel: environment.AI_WEB_SEARCH_MODEL,
       webSearchMaxResults: environment.AI_WEB_SEARCH_MAX_RESULTS,
       webFetchModel: environment.AI_WEB_FETCH_MODEL,

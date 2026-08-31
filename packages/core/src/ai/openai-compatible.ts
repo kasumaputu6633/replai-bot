@@ -122,17 +122,17 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
       ownerName: config.ownerName,
     });
     this.#temperature = config.temperature;
-    this.#webFetch = config.webFetchModel
+    this.#webFetch = config.webFetchModel && config.webApiKey && config.webBaseURL
       ? new NineRouterWebFetchClient({
-          apiKey: config.apiKey,
-          baseURL: config.baseURL,
+          apiKey: config.webApiKey,
+          baseURL: config.webBaseURL,
           model: config.webFetchModel,
         })
       : undefined;
-    this.#webSearch = config.webSearchModel
+    this.#webSearch = config.webSearchModel && config.webApiKey && config.webBaseURL
       ? new NineRouterWebSearchClient({
-          apiKey: config.apiKey,
-          baseURL: config.baseURL,
+          apiKey: config.webApiKey,
+          baseURL: config.webBaseURL,
           model: config.webSearchModel,
           maxResults: config.webSearchMaxResults ?? 5,
         })

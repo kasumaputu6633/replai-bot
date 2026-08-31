@@ -52,4 +52,26 @@ describe('loadBotConfig', () => {
       ownerName: 'Nando Ganteng',
     });
   });
+
+  it('keeps xAI chat credentials separate from optional web tools', () => {
+    vi.stubEnv('DISCORD_TOKEN', 'discord-token');
+    vi.stubEnv('DISCORD_CLIENT_ID', '123456789');
+    vi.stubEnv('AI_BASE_URL', 'https://api.x.ai/v1');
+    vi.stubEnv('AI_API_KEY', 'xai-key');
+    vi.stubEnv('AI_MODEL', 'grok-4');
+    vi.stubEnv('WEB_BASE_URL', 'https://web.example/v1');
+    vi.stubEnv('WEB_API_KEY', 'web-key');
+    vi.stubEnv('AI_WEB_SEARCH_MODEL', 'exa');
+    vi.stubEnv('AI_WEB_FETCH_MODEL', 'exa');
+
+    expect(loadBotConfig().ai).toMatchObject({
+      baseUrl: 'https://api.x.ai/v1',
+      apiKey: 'xai-key',
+      model: 'grok-4',
+      webBaseUrl: 'https://web.example/v1',
+      webApiKey: 'web-key',
+      webSearchModel: 'exa',
+      webFetchModel: 'exa',
+    });
+  });
 });

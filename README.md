@@ -90,9 +90,9 @@ The bot imports `@replai/core` directly. The Fastify API is an independent opera
 - Node.js 24.17 or newer
 - pnpm 11.22
 - A Discord application and bot token
-- An OpenAI-compatible chat-completions endpoint
+- An xAI or other OpenAI-compatible chat-completions endpoint
 - A model that supports `image_url` content when image analysis is required
-- 9Router-compatible `/search` and `/web/fetch` routes for the included live-research integrations
+- Optional 9Router-compatible `/search` and `/web/fetch` routes for live research
 
 ## Quick Start
 
@@ -144,15 +144,17 @@ The API listens on `http://localhost:3000` by default:
 | `DISCORD_TOKEN` | Bot | Required | Discord bot token |
 | `DISCORD_CLIENT_ID` | Bot | Required | Discord application ID |
 | `AFK_STATE_PATH` | Bot | `data/afk-guilds.json` | Persistent JSON path for per-guild AFK voice configuration |
-| `AI_BASE_URL` | Bot | Required | OpenAI-compatible API base URL, usually ending in `/v1` |
+| `AI_BASE_URL` | Bot | Required | xAI uses `https://api.x.ai/v1`; other OpenAI-compatible endpoints are supported |
 | `AI_API_KEY` | Bot | Required | AI provider API key |
 | `AI_MODEL` | Bot | Required | Chat model identifier |
 | `AI_PUBLIC_MODEL_NAME` | Bot | Empty | Optional public-facing model label; otherwise the configured model identifier is used |
 | `AI_TEMPERATURE` | Bot | Provider default | Optional creativity control from `0` to `2` |
 | `BOT_OWNER_NAME` | Bot | `Nando Ganteng` | Public owner/developer name used when identity is relevant |
-| `AI_WEB_SEARCH_MODEL` | Bot | `exa` | 9Router search provider |
+| `WEB_BASE_URL` | Bot | Empty | Optional 9Router-compatible web-tool base URL; leave empty to disable web tools |
+| `WEB_API_KEY` | Bot | Empty | API key for the separate web-tool endpoint |
+| `AI_WEB_SEARCH_MODEL` | Bot | Empty (`exa` in `.env.example`) | 9Router search provider model |
 | `AI_WEB_SEARCH_MAX_RESULTS` | Bot | `5` | Results per search, limited to `1-10` |
-| `AI_WEB_FETCH_MODEL` | Bot | `exa` | 9Router social-page extraction provider |
+| `AI_WEB_FETCH_MODEL` | Bot | Empty (`exa` in `.env.example`) | 9Router social-page extraction model |
 | `API_HOST` | API | `0.0.0.0` | Fastify listen address |
 | `API_PORT` | API | `3000` | Fastify listen port |
 
@@ -187,6 +189,7 @@ For a public bot approaching 100 guilds, complete Discord application verificati
 | --- | --- |
 | Direct factual question | Uses the question itself as searchable context |
 | Opinion, joke, creative, or coding request | Answers conversationally without unnecessary web search |
+| Casual or aggressive banter | Adapts only to the active speaker's recent style and may return proportional blunt language |
 | Mention plus URL, embed, image, or attachment | Analyzes evidence from the same message |
 | Reply plus mention | Resolves the referenced message and its reply chain |
 | Follow-up inside a thread | Reuses bounded, expiring thread context |

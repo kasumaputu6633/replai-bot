@@ -24,6 +24,8 @@ const provider = new OpenAICompatibleResearchProvider({
   publicModelName: config.ai.publicModelName,
   temperature: config.ai.temperature,
   ownerName: config.ai.ownerName,
+  webApiKey: config.ai.webApiKey,
+  webBaseURL: config.ai.webBaseUrl,
   webSearchModel: config.ai.webSearchModel,
   webSearchMaxResults: config.ai.webSearchMaxResults,
   webFetchModel: config.ai.webFetchModel,
