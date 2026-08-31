@@ -7,3 +7,4 @@ export const MAX_RESEARCH_TURNS = 12;
 export const MAX_RESEARCH_TURN_LENGTH = 3_000;
 export const MAX_RESEARCH_PARTICIPANTS = 8;
 export const MAX_COMPARISON_SOURCES = 4;
+export const MAX_POLL_ANSWERS = 10;

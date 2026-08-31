@@ -4,6 +4,7 @@ import {
   MAX_COMPARISON_SOURCES,
   MAX_EMBEDS,
   MAX_IMAGES,
+  MAX_POLL_ANSWERS,
   MAX_RESEARCH_PARTICIPANTS,
   MAX_RESEARCH_TURN_LENGTH,
   MAX_RESEARCH_TURNS,
@@ -43,6 +44,21 @@ export const sourceAuthorSchema = z.object({
   bot: z.boolean().optional(),
 });
 
+export const sourcePollAnswerSchema = z.object({
+  id: z.number().int().nonnegative(),
+  text: z.string().trim().min(1).max(300).nullable(),
+  emoji: optionalNonEmptyString,
+  voteCount: z.number().int().nonnegative(),
+});
+
+export const sourcePollSchema = z.object({
+  question: z.string().trim().min(1).max(300).nullable(),
+  answers: z.array(sourcePollAnswerSchema).min(1).max(MAX_POLL_ANSWERS),
+  allowMultiselect: z.boolean(),
+  expiresAt: z.iso.datetime().nullable(),
+  resultsFinalized: z.boolean(),
+});
+
 export const sourceContextSchema = z.object({
   messageId: z.string().trim().min(1),
   author: sourceAuthorSchema.optional(),
@@ -51,6 +67,7 @@ export const sourceContextSchema = z.object({
   images: z.array(sourceImageSchema).max(MAX_IMAGES),
   attachments: z.array(sourceAttachmentSchema).max(MAX_ATTACHMENTS),
   embeds: z.array(sourceEmbedSchema).max(MAX_EMBEDS),
+  poll: sourcePollSchema.optional(),
 });
 
 export const researchModeSchema = z.enum(['answer', 'verify', 'compare']);

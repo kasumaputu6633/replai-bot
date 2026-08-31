@@ -18,6 +18,7 @@ export {
   MAX_COMPARISON_SOURCES,
   MAX_EMBEDS,
   MAX_IMAGES,
+  MAX_POLL_ANSWERS,
   MAX_RESEARCH_PARTICIPANTS,
   MAX_RESEARCH_TURN_LENGTH,
   MAX_RESEARCH_TURNS,
@@ -30,6 +31,8 @@ export type {
   SourceContext,
   SourceEmbed,
   SourceImage,
+  SourcePoll,
+  SourcePollAnswer,
 } from './context/types.js';
 export { extractHttpUrls } from './context/urls.js';
 export { ResearchProviderError } from './errors/index.js';
@@ -72,6 +75,8 @@ export {
   researchTurnSchema,
   sourceAuthorSchema,
   sourceContextSchema,
+  sourcePollAnswerSchema,
+  sourcePollSchema,
 } from './research/schemas.js';
 export type {
   ResearchInput,

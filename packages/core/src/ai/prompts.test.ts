@@ -113,6 +113,35 @@ describe('conversation prompts', () => {
 
     expect(prompt).toContain('"profanityIntensity": "none"');
   });
+
+  it('includes poll options and requires an honest contextual choice', () => {
+    const prompt = buildConversationPrompt({
+      question: 'What should I know about this message?',
+      source: {
+        messageId: 'poll',
+        text: '<@bot>',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+        poll: {
+          question: 'Kapan berangkat?',
+          answers: [
+            { id: 1, text: 'besok', voteCount: 1 },
+            { id: 2, text: 'nanti', voteCount: 0 },
+          ],
+          allowMultiselect: false,
+          expiresAt: null,
+          resultsFinalized: false,
+        },
+      },
+    });
+
+    expect(prompt).toContain('"question": "Kapan berangkat?"');
+    expect(prompt).toContain('"text": "besok"');
+    expect(prompt).toContain('choose from the exact available answer text');
+    expect(prompt).toContain('cannot cast poll votes');
+  });
 });
 
 describe('buildResearchPrompt', () => {
@@ -215,7 +244,8 @@ describe('Replai system prompt', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('labeled avatar images');
     expect(REPLAI_SYSTEM_PROMPT).toContain('one compact paragraph');
     expect(REPLAI_SYSTEM_PROMPT).toContain('natural WhatsApp or Discord chat');
-    expect(REPLAI_SYSTEM_PROMPT).toContain('avoid em dashes');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('plain keyboard punctuation');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Avoid em dashes');
     expect(REPLAI_SYSTEM_PROMPT).toContain('Do not put every sentence on a new line');
   });
 

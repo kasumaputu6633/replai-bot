@@ -191,13 +191,16 @@ For a public bot approaching 100 guilds, complete Discord application verificati
 | Opinion, joke, creative, or coding request | Answers conversationally without unnecessary web search |
 | Casual or aggressive banter | Adapts only to the active speaker's recent style and may return proportional blunt language |
 | Mention plus URL, embed, image, or attachment | Analyzes evidence from the same message |
+| Mention in a Discord poll or reply to a poll | Reads its options and vote counts, then states a contextual choice |
 | Reply plus mention | Resolves the referenced message and its reply chain |
 | Follow-up inside a thread | Reuses bounded, expiring thread context |
 | `/afk channel:<voice>` | Saves and joins one AFK voice channel for the current guild |
 | Verification wording | Produces an explicit verdict with evidence and uncertainty |
 | Comparison wording | Searches each named target separately and explains practical trade-offs |
 
-A mention without a question or evidence receives a short usage instruction and does not invoke the AI provider.
+A mention without an explicit question asks the model to infer the relevant bounded Discord context; if none is available, it responds with a short clarification.
+
+Discord does not expose an API for bot accounts to cast a poll vote. Replai can read the poll and state which exact option it chooses, but it does not pretend that a visual vote was submitted.
 
 ## Context And Research Limits
 

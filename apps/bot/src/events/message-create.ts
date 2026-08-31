@@ -71,7 +71,8 @@ function hasStandaloneEvidence(source: SourceContext): boolean {
     source.urls.length > 0 ||
     source.images.length > 0 ||
     source.attachments.length > 0 ||
-    source.embeds.length > 0
+    source.embeds.length > 0 ||
+    Boolean(source.poll)
   );
 }
 
@@ -91,6 +92,11 @@ function mentionedParticipants(message: Message, botUserId: string): ResearchPar
       ).slice(0, 100),
       avatarUrl: user.displayAvatarURL({ extension: 'png', size: 256 }),
     }));
+}
+
+function pollMentionsBot(message: Message, botUserId: string): boolean {
+  const question = message.poll?.question.text;
+  return Boolean(question?.includes(`<@${botUserId}>`) || question?.includes(`<@!${botUserId}>`));
 }
 
 function buildResearchInput(
@@ -155,7 +161,11 @@ export async function handleMessageCreate(
     .filter((role) => role.tags?.botId === botUserId)
     .map((role) => role.id);
 
-  if (!message.mentions.users.has(botUserId) && botRoleIds.length === 0) {
+  if (
+    !message.mentions.users.has(botUserId) &&
+    botRoleIds.length === 0 &&
+    !pollMentionsBot(message, botUserId)
+  ) {
     return;
   }
 

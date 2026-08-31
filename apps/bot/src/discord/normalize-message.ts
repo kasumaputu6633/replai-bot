@@ -4,6 +4,7 @@ import {
   MAX_ATTACHMENTS,
   MAX_EMBEDS,
   MAX_IMAGES,
+  MAX_POLL_ANSWERS,
   MAX_SOURCE_TEXT_LENGTH,
   MAX_URLS,
   type SourceAttachment,
@@ -11,6 +12,7 @@ import {
   type SourceContext,
   type SourceEmbed,
   type SourceImage,
+  type SourcePoll,
 } from '@replai/core';
 import type { Message, MessageSnapshot } from 'discord.js';
 
@@ -35,6 +37,7 @@ export interface DiscordMessageContentData {
   content?: string | null | undefined;
   attachments: readonly DiscordAttachmentData[];
   embeds: readonly DiscordEmbedData[];
+  poll?: SourcePoll | null | undefined;
 }
 
 export interface DiscordMessageData extends DiscordMessageContentData {
@@ -104,6 +107,14 @@ export function normalizeMessageData(data: DiscordMessageData): SourceContext {
     .slice(0, MAX_EMBEDS)
     .map(normalizeEmbed)
     .filter((embed): embed is SourceEmbed => embed !== null);
+  const poll = sourceData.poll
+    ? {
+        ...sourceData.poll,
+        answers: sourceData.poll.answers.slice(0, MAX_POLL_ANSWERS).map((answer) => ({
+          ...answer,
+        })),
+      }
+    : undefined;
 
   const images: SourceImage[] = [];
   const seenImageUrls = new Set<string>();
@@ -145,6 +156,7 @@ export function normalizeMessageData(data: DiscordMessageData): SourceContext {
     images,
     attachments,
     embeds,
+    ...(poll ? { poll } : {}),
   };
 }
 
@@ -166,6 +178,24 @@ function mapDiscordContent(message: Message | MessageSnapshot): DiscordMessageCo
       provider: embed.provider?.name,
       author: embed.author?.name,
     })),
+    ...(message.poll
+      ? {
+          poll: {
+            question: message.poll.question.text,
+            answers: [...message.poll.answers.values()]
+              .slice(0, MAX_POLL_ANSWERS)
+              .map((answer) => ({
+                id: answer.id,
+                text: answer.text,
+                ...(answer.emoji ? { emoji: answer.emoji.toString() } : {}),
+                voteCount: answer.voteCount,
+              })),
+            allowMultiselect: message.poll.allowMultiselect,
+            expiresAt: message.poll.expiresAt?.toISOString() ?? null,
+            resultsFinalized: message.poll.resultsFinalized,
+          },
+        }
+      : {}),
   };
 }
 

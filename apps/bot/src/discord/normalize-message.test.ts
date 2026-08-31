@@ -119,4 +119,34 @@ describe('normalizeMessageData', () => {
       'https://official.example/header.jpg',
     ]);
   });
+
+  it('preserves bounded Discord poll context', () => {
+    const result = normalizeMessageData({
+      id: 'poll-message',
+      content: '<@bot>',
+      attachments: [],
+      embeds: [],
+      poll: {
+        question: 'Kapan berangkat?',
+        answers: [
+          { id: 1, text: 'besok', voteCount: 1 },
+          { id: 2, text: 'nanti', emoji: '🕒', voteCount: 0 },
+        ],
+        allowMultiselect: false,
+        expiresAt: '2026-08-31T12:00:00.000Z',
+        resultsFinalized: false,
+      },
+    });
+
+    expect(result.poll).toEqual({
+      question: 'Kapan berangkat?',
+      answers: [
+        { id: 1, text: 'besok', voteCount: 1 },
+        { id: 2, text: 'nanti', emoji: '🕒', voteCount: 0 },
+      ],
+      allowMultiselect: false,
+      expiresAt: '2026-08-31T12:00:00.000Z',
+      resultsFinalized: false,
+    });
+  });
 });

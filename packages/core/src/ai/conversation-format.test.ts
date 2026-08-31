@@ -22,6 +22,13 @@ describe('compactConversationReply', () => {
     ).toBe('Iya sih, idenya bagus, tapi eksekusinya masih berantakan.');
   });
 
+  it('normalizes AI-like Unicode punctuation even in long prose', () => {
+    const content = `${'x'.repeat(610)} Ryan Gosling—misalnya jadi “what-if” saat T’Challa pergi…`;
+    expect(compactConversationReply(content, 'menurut lu gimana?')).toBe(
+      `${'x'.repeat(610)} Ryan Gosling, misalnya jadi "what-if" saat T'Challa pergi...`,
+    );
+  });
+
   it.each([
     ['buatkan puisi', 'Langit diam\nMalam pulang\n\nAku menunggu'],
     ['kasih contoh code', '```ts\nconst answer = 42;\n```'],
@@ -31,7 +38,7 @@ describe('compactConversationReply', () => {
   });
 
   it('preserves em dashes when the requested format needs exact text', () => {
-    const content = 'Langit — diam\nMalam pulang';
+    const content = 'Langit — “diam”\nMalam pulang…';
     expect(compactConversationReply(content, 'buatkan puisi')).toBe(content);
   });
 

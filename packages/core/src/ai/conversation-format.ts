@@ -8,17 +8,26 @@ const MAX_COMPACT_REPLY_LINES = 6;
 
 export function compactConversationReply(content: string, request: string): string {
   const trimmed = content.trim();
-  if (
-    trimmed.length > MAX_COMPACT_REPLY_LENGTH ||
-    trimmed.split('\n').length > MAX_COMPACT_REPLY_LINES ||
-    FORMAT_SENSITIVE_REQUEST.test(request) ||
-    STRUCTURED_OUTPUT.test(trimmed)
-  ) {
+  if (FORMAT_SENSITIVE_REQUEST.test(request) || STRUCTURED_OUTPUT.test(trimmed)) {
     return trimmed;
   }
 
-  return trimmed
+  const normalized = trimmed
     .replace(/\s*—\s*/gu, ', ')
+    .replace(/\s*–\s*/gu, '-')
+    .replace(/[“”]/gu, '"')
+    .replace(/[‘’]/gu, "'")
+    .replace(/…/gu, '...')
+    .replace(/\u00a0/gu, ' ');
+
+  if (
+    normalized.length > MAX_COMPACT_REPLY_LENGTH ||
+    normalized.split('\n').length > MAX_COMPACT_REPLY_LINES
+  ) {
+    return normalized;
+  }
+
+  return normalized
     .replace(/[ \t]*\n+[ \t]*/gu, ' ')
     .replace(/ {2,}/gu, ' ');
 }

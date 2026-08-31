@@ -2,6 +2,7 @@ import {
   type ResearchInput,
   type ResearchProvider,
   type SourceContext,
+  type SourcePoll,
 } from '@replai/core';
 import type { Client, Message } from 'discord.js';
 import type { Logger } from 'pino';
@@ -26,6 +27,8 @@ interface FakeMessageOptions {
   authorName?: string;
   authorAvatarUrl?: string;
   mentionedUsers?: Array<{ id: string; name: string; avatarUrl: string }>;
+  mentionsBot?: boolean;
+  poll?: SourcePoll;
   replyError?: Error;
 }
 
@@ -77,11 +80,15 @@ function fakeMessage(options: FakeMessageOptions): Message {
     : vi.fn().mockResolvedValue(assistantMessage);
 
   const mentionedUsers = [
-    {
-      id: 'bot',
-      name: 'Replai',
-      avatarUrl: 'https://cdn.discordapp.com/bot.png',
-    },
+    ...(options.mentionsBot === false
+      ? []
+      : [
+          {
+            id: 'bot',
+            name: 'Replai',
+            avatarUrl: 'https://cdn.discordapp.com/bot.png',
+          },
+        ]),
     ...(options.mentionedUsers ?? []),
   ];
 
@@ -144,6 +151,23 @@ function fakeMessage(options: FakeMessageOptions): Message {
     reply,
     attachments: new Map(),
     embeds: [],
+    poll: options.poll
+      ? {
+          question: { text: options.poll.question },
+          answers: new Map(
+            options.poll.answers.map((answer) => [
+              answer.id,
+              {
+                ...answer,
+                emoji: answer.emoji ? { toString: () => answer.emoji } : null,
+              },
+            ]),
+          ),
+          allowMultiselect: options.poll.allowMultiselect,
+          expiresAt: options.poll.expiresAt ? new Date(options.poll.expiresAt) : null,
+          resultsFinalized: options.poll.resultsFinalized,
+        }
+      : null,
     messageSnapshots: new Map(),
   } as unknown as Message;
 }
@@ -368,6 +392,42 @@ describe('handleMessageCreate', () => {
       sourceMessageId: '6',
       queryMessageId: '6',
     });
+  });
+
+  it('passes a mention-only Discord poll to the provider as standalone context', async () => {
+    const deps = dependencies(
+      vi.fn().mockResolvedValue({ content: 'Gue pilih besok, biar nggak molor.' }),
+    );
+    const query = fakeMessage({
+      id: '10',
+      content: '',
+      mentionsBot: false,
+      poll: {
+        question: '<@bot> kapan berangkat?',
+        answers: [
+          { id: 1, text: 'besok', voteCount: 1 },
+          { id: 2, text: 'nanti', voteCount: 0 },
+        ],
+        allowMultiselect: false,
+        expiresAt: null,
+        resultsFinalized: false,
+      },
+    });
+
+    await handleMessageCreate(query, deps);
+
+    expect(deps.providerResearch).toHaveBeenCalledOnce();
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.source.poll).toMatchObject({
+      question: '<@bot> kapan berangkat?',
+      answers: [
+        { id: 1, text: 'besok', voteCount: 1 },
+        { id: 2, text: 'nanti', voteCount: 0 },
+      ],
+    });
+    expect(query.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: 'Gue pilih besok, biar nggak molor.' }),
+    );
   });
 
   it('does not store blocked or failed thread requests', async () => {

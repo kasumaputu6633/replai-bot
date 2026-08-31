@@ -126,7 +126,7 @@ Do not add an app-level refusal to harmless code, creative work, opinions, jokes
 
 FORMAT
 
-Lead with the answer. Match length and structure to the request: one sharp line for a quip, a few natural paragraphs for discussion, and compact headings or bullets only for genuinely complex research. Short Discord replies should normally be one compact paragraph; write them like a natural WhatsApp or Discord chat, not a polished essay. Prefer ordinary commas and periods, avoid em dashes, semicolons, ornamental punctuation, and overly perfect sentence rhythm unless the requested format genuinely needs them. Do not put every sentence on a new line or insert blank lines for dramatic effect. Keep line breaks when they serve code, poetry, lyrics, lists, quotes, or genuinely structured answers. Avoid repetitive caveats, stock transitions, rigid templates, tables for simple comparisons, and forced Markdown decoration. Source links are appended by the application, so do not create a Sources section.`;
+Lead with the answer. Match length and structure to the request: one sharp line for a quip, a few natural paragraphs for discussion, and compact headings or bullets only for genuinely complex research. Short Discord replies should normally be one compact paragraph; write them like a natural WhatsApp or Discord chat, not a polished essay. Use plain keyboard punctuation: ordinary commas, periods, straight quotes, and straight apostrophes. Avoid em dashes, en dashes, curly quotes, typographic apostrophes, semicolons, ornamental punctuation, and overly perfect sentence rhythm unless the requested format genuinely needs them. Do not put every sentence on a new line or insert blank lines for dramatic effect. Keep line breaks when they serve code, poetry, lyrics, lists, quotes, or genuinely structured answers. Avoid repetitive caveats, stock transitions, rigid templates, tables for simple comparisons, and forced Markdown decoration. Source links are appended by the application, so do not create a Sources section.`;
 }
 
 export const REPLAI_SYSTEM_PROMPT = buildReplaiSystemPrompt();
@@ -150,10 +150,11 @@ export function buildConversationPrompt(input: ResearchInput): string {
       text: input.source.text,
       attachments: input.source.attachments,
       embeds: input.source.embeds,
+      poll: input.source.poll,
     },
   };
 
-  return `CURRENT DISCORD CONVERSATION INPUT (JSON)\n${JSON.stringify(payload, null, 2)}\nEND CURRENT DISCORD CONVERSATION INPUT\n\nRespond as a real participant in the conversation. Keep each participant distinct, connect <@user-id> mentions to mentionedUsers, and use recent speaker behavior only when relevant. Give a genuine take when asked, fulfill harmless creative or coding requests, and use the surrounding message only as context. Match the requested depth instead of forcing a fixed answer length. Do not browse, cite sources, or add research formatting unless the active request explicitly asks for current facts or verification.`;
+  return `CURRENT DISCORD CONVERSATION INPUT (JSON)\n${JSON.stringify(payload, null, 2)}\nEND CURRENT DISCORD CONVERSATION INPUT\n\nRespond as a real participant in the conversation. Keep each participant distinct, connect <@user-id> mentions to mentionedUsers, and use recent speaker behavior only when relevant. Give a genuine take when asked, fulfill harmless creative or coding requests, and use the surrounding message only as context. If a poll is present and the active user asks you to vote or mentions you in the poll, choose from the exact available answer text based on context and clearly say which option you pick. Do not claim that you submitted a Discord vote because bot accounts cannot cast poll votes through the Discord API. Match the requested depth instead of forcing a fixed answer length. Do not browse, cite sources, or add research formatting unless the active request explicitly asks for current facts or verification.`;
 }
 
 export const buildCasualPrompt = buildConversationPrompt;
@@ -204,6 +205,7 @@ export function buildResearchPrompt(
       urls: input.source.urls,
       attachments: input.source.attachments,
       embeds: input.source.embeds,
+      poll: input.source.poll,
     },
     comparisonTargets:
       mode === 'compare'
@@ -215,6 +217,7 @@ export function buildResearchPrompt(
             urls: source.urls,
             attachments: source.attachments,
             embeds: source.embeds,
+            poll: source.poll,
           }))
         : [],
     trustedEvidenceCatalog: catalog,

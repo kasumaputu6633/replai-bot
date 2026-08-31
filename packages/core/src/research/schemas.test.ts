@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_COMPARISON_SOURCES,
+  MAX_POLL_ANSWERS,
   MAX_RESEARCH_PARTICIPANTS,
   MAX_RESEARCH_TURN_LENGTH,
   MAX_RESEARCH_TURNS,
@@ -94,6 +95,51 @@ describe('researchInputSchema', () => {
             { length: MAX_RESEARCH_PARTICIPANTS + 1 },
             (_, index) => participant(index),
           ),
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts bounded poll context and rejects invalid vote data', () => {
+    const basePoll = {
+      question: 'Pilih kapan?',
+      answers: Array.from({ length: MAX_POLL_ANSWERS }, (_, index) => ({
+        id: index + 1,
+        text: `Pilihan ${index + 1}`,
+        voteCount: index,
+      })),
+      allowMultiselect: false,
+      expiresAt: '2026-08-31T12:00:00.000Z',
+      resultsFinalized: false,
+    };
+
+    expect(
+      researchInputSchema.safeParse({
+        question: 'gue pilih apa?',
+        source: { ...source('poll'), poll: basePoll },
+      }).success,
+    ).toBe(true);
+    expect(
+      researchInputSchema.safeParse({
+        question: 'gue pilih apa?',
+        source: {
+          ...source('poll'),
+          poll: {
+            ...basePoll,
+            answers: [...basePoll.answers, { id: 11, text: 'Kelebihan', voteCount: 0 }],
+          },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      researchInputSchema.safeParse({
+        question: 'gue pilih apa?',
+        source: {
+          ...source('poll'),
+          poll: {
+            ...basePoll,
+            answers: [{ id: 1, text: 'Rusak', voteCount: -1 }],
+          },
         },
       }).success,
     ).toBe(false);

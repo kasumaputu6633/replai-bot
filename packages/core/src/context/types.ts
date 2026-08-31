@@ -28,6 +28,21 @@ export interface SourceAuthor {
   bot?: boolean | undefined;
 }
 
+export interface SourcePollAnswer {
+  id: number;
+  text: string | null;
+  emoji?: string | undefined;
+  voteCount: number;
+}
+
+export interface SourcePoll {
+  question: string | null;
+  answers: SourcePollAnswer[];
+  allowMultiselect: boolean;
+  expiresAt: string | null;
+  resultsFinalized: boolean;
+}
+
 export interface SourceContext {
   messageId: string;
   author?: SourceAuthor | undefined;
@@ -36,4 +51,5 @@ export interface SourceContext {
   images: SourceImage[];
   attachments: SourceAttachment[];
   embeds: SourceEmbed[];
+  poll?: SourcePoll | undefined;
 }
