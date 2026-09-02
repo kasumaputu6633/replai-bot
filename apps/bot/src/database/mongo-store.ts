@@ -121,7 +121,10 @@ export class MongoStore implements AfkStatePersistence, EvaluationStore {
     keys: Document,
     options: { unique?: boolean } = {},
   ): Promise<void> {
-    const indexes = await collection.listIndexes().toArray();
+    const exists = await this.#database
+      .listCollections({ name: collection.collectionName }, { nameOnly: true })
+      .hasNext();
+    const indexes = exists ? await collection.listIndexes().toArray() : [];
     if (indexes.some((index) => sameIndexKeys(index.key, keys))) return;
     await collection.createIndex(keys, options);
   }

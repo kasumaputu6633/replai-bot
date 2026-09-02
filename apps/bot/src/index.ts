@@ -32,16 +32,17 @@ if (config.mongodbUri) {
       logger.info(counts, 'MongoDB migration completed');
     }
   } catch (error) {
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode =
+      typeof error === 'object' && error && 'code' in error ? String(error.code) : undefined;
     logger.error(
       {
-        errorName: error instanceof Error ? error.name : 'UnknownError',
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorCode:
-          typeof error === 'object' && error && 'code' in error
-            ? String(error.code)
-            : undefined,
+        errorName,
+        errorMessage,
+        errorCode,
       },
-      'MongoDB unavailable; continuing with file AFK state',
+      `MongoDB unavailable (${errorName}${errorCode ? ` ${errorCode}` : ''}: ${errorMessage}); continuing with file AFK state`,
     );
   }
 }
