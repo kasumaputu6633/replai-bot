@@ -49,7 +49,7 @@ export class MongoStore implements AfkStatePersistence, EvaluationStore {
     databaseName: string,
     logger: Logger,
   ): Promise<MongoStore> {
-    const client = new MongoClient(uri, { family: 0, serverSelectionTimeoutMS: 10_000 });
+    const client = new MongoClient(uri, { family: 6, serverSelectionTimeoutMS: 10_000 });
     try {
       await client.connect();
       const store = new MongoStore(client, client.db(databaseName), logger);
@@ -98,7 +98,7 @@ export class MongoStore implements AfkStatePersistence, EvaluationStore {
   }
 
   public async migrateFrom(uri: string, databaseName: string): Promise<MigrationCounts> {
-    const source = new MongoClient(uri, { family: 0, serverSelectionTimeoutMS: 10_000 });
+    const source = new MongoClient(uri, { serverSelectionTimeoutMS: 10_000 });
     try {
       await source.connect();
       const sourceDatabase = source.db(databaseName);
