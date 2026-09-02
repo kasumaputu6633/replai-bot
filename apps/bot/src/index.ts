@@ -21,8 +21,28 @@ if (config.mongodbUri) {
   try {
     mongoStore = await MongoStore.connect(config.mongodbUri, config.mongodbDatabase, logger);
     logger.info({ database: config.mongodbDatabase }, 'MongoDB connected');
+    if (
+      config.mongodbMigrationSourceUri &&
+      config.mongodbMigrationSourceUri !== config.mongodbUri
+    ) {
+      const counts = await mongoStore.migrateFrom(
+        config.mongodbMigrationSourceUri,
+        config.mongodbDatabase,
+      );
+      logger.info(counts, 'MongoDB migration completed');
+    }
   } catch (error) {
-    logger.error({ err: error }, 'MongoDB unavailable; continuing with file AFK state');
+    logger.error(
+      {
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode:
+          typeof error === 'object' && error && 'code' in error
+            ? String(error.code)
+            : undefined,
+      },
+      'MongoDB unavailable; continuing with file AFK state',
+    );
   }
 }
 const afkState = await AfkStateStore.open(config.afkStatePath, mongoStore);

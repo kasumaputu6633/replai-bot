@@ -146,6 +146,7 @@ The API listens on `http://localhost:3000` by default:
 | `AFK_STATE_PATH` | Bot | `data/afk-guilds.json` | Local fallback path for per-guild AFK voice configuration |
 | `MONGODB_URI` | Bot | Empty | Optional MongoDB URI for conversation evaluation logs and AFK state |
 | `MONGODB_DATABASE` | Bot | `replai` | MongoDB database name |
+| `MONGODB_MIGRATION_SOURCE_URI` | Bot | Empty | Optional source URI for idempotent startup migration into `MONGODB_URI` |
 | `AI_BASE_URL` | Bot | Required | xAI uses `https://api.x.ai/v1`; other OpenAI-compatible endpoints are supported |
 | `AI_API_KEY` | Bot | Required | AI provider API key |
 | `AI_MODEL` | Bot | Required | Chat model identifier |

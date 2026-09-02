@@ -44,6 +44,7 @@ const botEnvironmentSchema = commonSchema.extend({
   AFK_STATE_PATH: z.string().trim().min(1).default('data/afk-guilds.json'),
   MONGODB_URI: optionalEnvironmentString,
   MONGODB_DATABASE: z.string().trim().min(1).default('replai'),
+  MONGODB_MIGRATION_SOURCE_URI: optionalEnvironmentString,
   AI_BASE_URL: z.url().refine((value) => value.startsWith('http://') || value.startsWith('https://'), {
     message: 'must use HTTP or HTTPS',
   }),
@@ -76,6 +77,7 @@ export interface BotConfig extends CommonConfig {
   afkStatePath: string;
   mongodbUri?: string | undefined;
   mongodbDatabase: string;
+  mongodbMigrationSourceUri?: string | undefined;
   privilegedUserIds: string[];
   ai: {
     baseUrl: string;
@@ -121,6 +123,7 @@ export function loadBotConfig(): BotConfig {
     afkStatePath: environment.AFK_STATE_PATH,
     mongodbUri: environment.MONGODB_URI,
     mongodbDatabase: environment.MONGODB_DATABASE,
+    mongodbMigrationSourceUri: environment.MONGODB_MIGRATION_SOURCE_URI,
     privilegedUserIds: environment.BOT_PRIVILEGED_USER_IDS,
     ai: {
       baseUrl: environment.AI_BASE_URL,
@@ -159,6 +162,7 @@ export function createLogger(service: string, level: LevelWithSilent): Logger {
         'aiApiKey',
         'apiKey',
         'mongodbUri',
+        'mongodbMigrationSourceUri',
         'token',
         'authorization',
         'headers.authorization',
