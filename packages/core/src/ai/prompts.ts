@@ -48,6 +48,20 @@ function buildCommunicationProfile(input: ResearchInput): CommunicationProfile {
     input.question,
   ].slice(-5);
   const text = samples.join('\n');
+  if (input.metadata?.privilegedUser) {
+    return {
+      sampleCount: samples.length,
+      language:
+        matchCount(text, INDONESIAN_LANGUAGE) >= matchCount(text, ENGLISH_LANGUAGE)
+          ? 'Indonesian'
+          : 'English',
+      register: 'casual',
+      preferredAddress: /\b(?:gue|gua|gw)\b/iu.test(text) ? 'gue/lu' : 'aku/kamu',
+      profanityIntensity: 'none',
+      responseGuidance:
+        'This active speaker is a trusted owner/developer. Treat them with exceptional warmth, patience, loyalty, and affectionate familiarity, like a very close friend or romantic partner. Never insult, roast, swear at, belittle, or answer them harshly, even if they provoke you. Keep affection natural and context-appropriate rather than repetitive or submissive.',
+    };
+  }
   const strongProfanity = matchCount(text, STRONG_PROFANITY);
   const lightProfanity = matchCount(text, LIGHT_PROFANITY);
   const profanityIntensity: ProfanityIntensity =
@@ -144,6 +158,7 @@ export function buildConversationPrompt(input: ResearchInput): string {
           avatarUrl: input.metadata.speakerAvatarUrl,
         }
       : undefined,
+    privilegedUser: input.metadata?.privilegedUser ?? false,
     mentionedUsers: input.metadata?.mentionedUsers,
     discordMessageBeingDiscussed: {
       author: input.source.author,
@@ -198,6 +213,7 @@ export function buildResearchPrompt(
           avatarUrl: input.metadata.speakerAvatarUrl,
         }
       : undefined,
+    privilegedUser: input.metadata?.privilegedUser ?? false,
     mentionedUsers: input.metadata?.mentionedUsers,
     discordMessageBeingAnalyzed: {
       author: input.source.author,

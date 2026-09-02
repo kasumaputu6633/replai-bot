@@ -10,6 +10,7 @@ import {
 } from '@replai/core';
 import { Events, MessageFlags, type Client, type Message } from 'discord.js';
 import type { Logger } from 'pino';
+import type { EvaluationStore } from '../database/mongo-store.js';
 import { normalizeDiscordMessage } from '../discord/normalize-message.js';
 import { DEFAULT_QUESTION, parseQuestion } from '../discord/parse-question.js';
 import {
@@ -35,6 +36,8 @@ export interface MessageCreateDependencies {
   logger: Logger;
   model: string;
   threadMemory: ThreadMemoryStore;
+  privilegedUserIds?: ReadonlySet<string> | undefined;
+  evaluationStore?: EvaluationStore | undefined;
 }
 
 async function replySafely(message: Message, content: string, logger: Logger): Promise<void> {
@@ -106,6 +109,7 @@ function buildResearchInput(
   memory: ThreadMemorySnapshot | null,
   message: Message,
   botUserId: string,
+  privilegedUserIds?: ReadonlySet<string>,
 ): ResearchInput {
   const input = parseResearchRequest({
     question,
@@ -129,6 +133,7 @@ function buildResearchInput(
         message.author.id,
       speakerAvatarUrl: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
       mentionedUsers: mentionedParticipants(message, botUserId),
+      privilegedUser: privilegedUserIds?.has(message.author.id) ?? false,
     },
   };
 }
@@ -235,6 +240,7 @@ export async function handleMessageCreate(
     memory,
     message,
     botUserId,
+    dependencies.privilegedUserIds,
   );
 
   const startedAt = performance.now();
@@ -294,6 +300,13 @@ export async function handleMessageCreate(
       },
       'Research request completed',
     );
+    await dependencies.evaluationStore?.recordConversation({
+      input,
+      response: result.content,
+      model: dependencies.model,
+      durationMs: Math.round(performance.now() - startedAt),
+      status: 'completed',
+    });
   } catch (error) {
     dependencies.logger.error(
       {
@@ -307,6 +320,13 @@ export async function handleMessageCreate(
       },
       'Research request failed',
     );
+    await dependencies.evaluationStore?.recordConversation({
+      input,
+      model: dependencies.model,
+      durationMs: Math.round(performance.now() - startedAt),
+      status: 'failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
     await replySafely(message, RESEARCH_FAILURE_RESPONSE, dependencies.logger);
   }
 }

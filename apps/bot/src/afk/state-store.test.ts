@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { AfkStateStore } from './state-store.js';
+import { describe, expect, it, vi } from 'vitest';
+import { AfkStateStore, type AfkStatePersistence } from './state-store.js';
 
 describe('AfkStateStore', () => {
   it('persists independent AFK channels for multiple guilds and reloads them', async () => {
@@ -42,5 +42,33 @@ describe('AfkStateStore', () => {
     );
     const store = await AfkStateStore.open(filePath);
     expect(store.values()).toEqual([]);
+  });
+
+  it('loads and updates AFK state through configured persistence', async () => {
+    const persisted = {
+      guildId: 'mongo-guild',
+      channelId: 'mongo-voice',
+      updatedBy: 'owner',
+      updatedAt: '2026-09-02T00:00:00.000Z',
+    };
+    const persistence: AfkStatePersistence = {
+      loadAfkStates: vi.fn().mockResolvedValue([persisted]),
+      setAfkState: vi.fn().mockResolvedValue(undefined),
+      deleteAfkState: vi.fn().mockResolvedValue(undefined),
+    };
+    const filePath = join(
+      process.env.TMPDIR ?? '/tmp',
+      `replai-afk-mongo-${process.pid}-${Date.now()}.json`,
+    );
+    const store = await AfkStateStore.open(filePath, persistence);
+
+    expect(store.get('mongo-guild')).toEqual(persisted);
+    await store.set({ ...persisted, channelId: 'new-voice' });
+    expect(persistence.setAfkState).toHaveBeenCalledWith({
+      ...persisted,
+      channelId: 'new-voice',
+    });
+    await store.delete('mongo-guild');
+    expect(persistence.deleteAfkState).toHaveBeenCalledWith('mongo-guild');
   });
 });

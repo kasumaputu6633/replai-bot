@@ -25,11 +25,25 @@ const optionalEnvironmentUrl = z.preprocess(
     })
     .optional(),
 );
+const discordSnowflakeList = z
+  .string()
+  .default('268364999389478912')
+  .transform((value, context) => {
+    const ids = [...new Set(value.split(',').map((id) => id.trim()).filter(Boolean))];
+    const invalidId = ids.find((id) => !/^\d+$/.test(id));
+    if (invalidId) {
+      context.addIssue({ code: 'custom', message: `contains invalid Discord ID: ${invalidId}` });
+      return z.NEVER;
+    }
+    return ids;
+  });
 
 const botEnvironmentSchema = commonSchema.extend({
   DISCORD_TOKEN: z.string().trim().min(1, 'is required'),
   DISCORD_CLIENT_ID: z.string().trim().regex(/^\d+$/, 'must be a Discord snowflake'),
   AFK_STATE_PATH: z.string().trim().min(1).default('data/afk-guilds.json'),
+  MONGODB_URI: optionalEnvironmentString,
+  MONGODB_DATABASE: z.string().trim().min(1).default('replai'),
   AI_BASE_URL: z.url().refine((value) => value.startsWith('http://') || value.startsWith('https://'), {
     message: 'must use HTTP or HTTPS',
   }),
@@ -38,6 +52,7 @@ const botEnvironmentSchema = commonSchema.extend({
   AI_PUBLIC_MODEL_NAME: optionalEnvironmentString,
   AI_TEMPERATURE: optionalEnvironmentNumber,
   BOT_OWNER_NAME: z.string().trim().min(1).default('Nando Ganteng'),
+  BOT_PRIVILEGED_USER_IDS: discordSnowflakeList,
   WEB_BASE_URL: optionalEnvironmentUrl,
   WEB_API_KEY: optionalEnvironmentString,
   AI_WEB_SEARCH_MODEL: optionalEnvironmentString,
@@ -59,6 +74,9 @@ export interface BotConfig extends CommonConfig {
   discordToken: string;
   discordClientId: string;
   afkStatePath: string;
+  mongodbUri?: string | undefined;
+  mongodbDatabase: string;
+  privilegedUserIds: string[];
   ai: {
     baseUrl: string;
     apiKey: string;
@@ -101,6 +119,9 @@ export function loadBotConfig(): BotConfig {
     discordToken: environment.DISCORD_TOKEN,
     discordClientId: environment.DISCORD_CLIENT_ID,
     afkStatePath: environment.AFK_STATE_PATH,
+    mongodbUri: environment.MONGODB_URI,
+    mongodbDatabase: environment.MONGODB_DATABASE,
+    privilegedUserIds: environment.BOT_PRIVILEGED_USER_IDS,
     ai: {
       baseUrl: environment.AI_BASE_URL,
       apiKey: environment.AI_API_KEY,
@@ -137,6 +158,7 @@ export function createLogger(service: string, level: LevelWithSilent): Logger {
         'discordToken',
         'aiApiKey',
         'apiKey',
+        'mongodbUri',
         'token',
         'authorization',
         'headers.authorization',

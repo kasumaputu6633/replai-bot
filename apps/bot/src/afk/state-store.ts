@@ -8,6 +8,12 @@ export interface AfkGuildState {
   updatedBy: string;
 }
 
+export interface AfkStatePersistence {
+  loadAfkStates(): Promise<AfkGuildState[]>;
+  setAfkState(state: AfkGuildState): Promise<void>;
+  deleteAfkState(guildId: string): Promise<void>;
+}
+
 interface PersistedAfkState {
   version: 1;
   guilds: AfkGuildState[];
@@ -32,15 +38,20 @@ function isAfkGuildState(value: unknown): value is AfkGuildState {
 
 export class AfkStateStore {
   readonly #filePath: string;
+  readonly #persistence: AfkStatePersistence | undefined;
   readonly #guilds = new Map<string, AfkGuildState>();
   #writeQueue: Promise<void> = Promise.resolve();
 
-  private constructor(filePath: string) {
+  private constructor(filePath: string, persistence?: AfkStatePersistence) {
     this.#filePath = filePath;
+    this.#persistence = persistence;
   }
 
-  public static async open(filePath: string): Promise<AfkStateStore> {
-    const store = new AfkStateStore(filePath);
+  public static async open(
+    filePath: string,
+    persistence?: AfkStatePersistence,
+  ): Promise<AfkStateStore> {
+    const store = new AfkStateStore(filePath, persistence);
     await store.#load();
     return store;
   }
@@ -56,18 +67,25 @@ export class AfkStateStore {
 
   public async set(state: AfkGuildState): Promise<void> {
     this.#guilds.set(state.guildId, { ...state });
-    await this.#persist();
+    await Promise.all([this.#persist(), this.#persistence?.setAfkState(state)]);
   }
 
   public async delete(guildId: string): Promise<boolean> {
     const deleted = this.#guilds.delete(guildId);
     if (deleted) {
-      await this.#persist();
+      await Promise.all([this.#persist(), this.#persistence?.deleteAfkState(guildId)]);
     }
     return deleted;
   }
 
   async #load(): Promise<void> {
+    if (this.#persistence) {
+      const states = await this.#persistence.loadAfkStates();
+      for (const state of states) {
+        if (isAfkGuildState(state)) this.#guilds.set(state.guildId, { ...state });
+      }
+      if (states.length > 0) return;
+    }
     let raw: string;
     try {
       raw = await readFile(this.#filePath, 'utf8');
@@ -86,6 +104,9 @@ export class AfkStateStore {
       if (isAfkGuildState(state)) {
         this.#guilds.set(state.guildId, { ...state });
       }
+    }
+    if (this.#persistence) {
+      await Promise.all(this.values().map((state) => this.#persistence!.setAfkState(state)));
     }
   }
 

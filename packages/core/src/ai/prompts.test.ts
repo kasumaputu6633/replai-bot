@@ -266,4 +266,23 @@ describe('Replai system prompt', () => {
     expect(prompt).toContain('Nando Ganteng');
     expect(REPLAI_SYSTEM_PROMPT).not.toContain('running on the "Ox Alpha" model');
   });
+
+  it('overrides rough tone for a trusted owner or developer', () => {
+    const prompt = buildConversationPrompt({
+      question: 'dasar goblok, jawab gue',
+      source: {
+        messageId: 'message',
+        text: 'dasar goblok, jawab gue',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+      metadata: { userId: '268364999389478912', privilegedUser: true },
+    });
+
+    expect(prompt).toContain('trusted owner/developer');
+    expect(prompt).toContain('Never insult, roast, swear at, belittle');
+    expect(prompt).toContain('"privilegedUser": true');
+  });
 });

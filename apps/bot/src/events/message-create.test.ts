@@ -348,6 +348,32 @@ describe('handleMessageCreate', () => {
     });
   });
 
+  it('marks configured owner or developer IDs and records completed evaluations', async () => {
+    const deps = dependencies();
+    const recordConversation = vi.fn().mockResolvedValue(undefined);
+    deps.privilegedUserIds = new Set(['268364999389478912']);
+    deps.evaluationStore = { recordConversation };
+    const query = fakeMessage({
+      id: '11',
+      content: '<@bot> halo sayang',
+      authorId: '268364999389478912',
+      authorName: 'Nando',
+    });
+
+    await handleMessageCreate(query, deps);
+
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.metadata?.privilegedUser).toBe(true);
+    expect(recordConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input,
+        response: 'Delivered answer',
+        model: 'test-model',
+        status: 'completed',
+      }),
+    );
+  });
+
   it('blocks explicit sexual-content discovery before calling the provider', async () => {
     const deps = dependencies();
     const query = fakeMessage({ id: '8', content: '<@bot> cariin aku bokep lokal dong' });

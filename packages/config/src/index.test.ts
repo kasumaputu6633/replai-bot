@@ -23,6 +23,24 @@ describe('loadBotConfig', () => {
       ownerName: 'Nando Ganteng',
     });
     expect(loadBotConfig().afkStatePath).toBe('data/afk-guilds.json');
+    expect(loadBotConfig().privilegedUserIds).toEqual(['268364999389478912']);
+  });
+
+  it('parses MongoDB settings and multiple privileged Discord IDs', () => {
+    vi.stubEnv('DISCORD_TOKEN', 'discord-token');
+    vi.stubEnv('DISCORD_CLIENT_ID', '123456789');
+    vi.stubEnv('AI_BASE_URL', 'https://gateway.example/v1');
+    vi.stubEnv('AI_API_KEY', 'api-key');
+    vi.stubEnv('AI_MODEL', 'provider-model');
+    vi.stubEnv('MONGODB_URI', 'mongodb://localhost:27017');
+    vi.stubEnv('MONGODB_DATABASE', 'replai-test');
+    vi.stubEnv('BOT_PRIVILEGED_USER_IDS', '268364999389478912, 987654321');
+
+    expect(loadBotConfig()).toMatchObject({
+      mongodbUri: 'mongodb://localhost:27017',
+      mongodbDatabase: 'replai-test',
+      privilegedUserIds: ['268364999389478912', '987654321'],
+    });
   });
 
   it('accepts a Railway volume path for persistent AFK state', () => {

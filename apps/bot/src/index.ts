@@ -4,6 +4,7 @@ import { Events } from 'discord.js';
 import { AfkStateStore } from './afk/state-store.js';
 import { AfkVoiceManager } from './afk/voice-manager.js';
 import { createDiscordClient } from './client.js';
+import { MongoStore } from './database/mongo-store.js';
 import {
   registerAfkApplicationCommand,
   registerAfkInteractionHandler,
@@ -15,7 +16,16 @@ const config = loadBotConfig();
 const logger = createLogger('replai-bot', config.logLevel);
 const client = createDiscordClient();
 const threadMemory = new ThreadMemoryStore();
-const afkState = await AfkStateStore.open(config.afkStatePath);
+let mongoStore: MongoStore | undefined;
+if (config.mongodbUri) {
+  try {
+    mongoStore = await MongoStore.connect(config.mongodbUri, config.mongodbDatabase, logger);
+    logger.info({ database: config.mongodbDatabase }, 'MongoDB connected');
+  } catch (error) {
+    logger.error({ err: error }, 'MongoDB unavailable; continuing with file AFK state');
+  }
+}
+const afkState = await AfkStateStore.open(config.afkStatePath, mongoStore);
 const afkVoice = new AfkVoiceManager(client, afkState, logger);
 const provider = new OpenAICompatibleResearchProvider({
   apiKey: config.ai.apiKey,
@@ -38,16 +48,19 @@ registerMessageCreateHandler({
   logger,
   model: config.ai.model,
   threadMemory,
+  privilegedUserIds: new Set(config.privilegedUserIds),
+  evaluationStore: mongoStore,
 });
 registerAfkInteractionHandler(client, afkVoice, logger);
 
 let shutdownPromise: Promise<void> | undefined;
 
 function shutdown(signal: string): Promise<void> {
-  shutdownPromise ??= Promise.resolve().then(() => {
+  shutdownPromise ??= Promise.resolve().then(async () => {
     logger.info({ signal }, 'Shutting down Discord bot');
     afkVoice.shutdown();
     client.destroy();
+    await mongoStore?.close();
   });
   return shutdownPromise;
 }

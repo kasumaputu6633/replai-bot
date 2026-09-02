@@ -143,13 +143,16 @@ The API listens on `http://localhost:3000` by default:
 | `LOG_LEVEL` | Both | `info` | Pino log level |
 | `DISCORD_TOKEN` | Bot | Required | Discord bot token |
 | `DISCORD_CLIENT_ID` | Bot | Required | Discord application ID |
-| `AFK_STATE_PATH` | Bot | `data/afk-guilds.json` | Persistent JSON path for per-guild AFK voice configuration |
+| `AFK_STATE_PATH` | Bot | `data/afk-guilds.json` | Local fallback path for per-guild AFK voice configuration |
+| `MONGODB_URI` | Bot | Empty | Optional MongoDB URI for conversation evaluation logs and AFK state |
+| `MONGODB_DATABASE` | Bot | `replai` | MongoDB database name |
 | `AI_BASE_URL` | Bot | Required | xAI uses `https://api.x.ai/v1`; other OpenAI-compatible endpoints are supported |
 | `AI_API_KEY` | Bot | Required | AI provider API key |
 | `AI_MODEL` | Bot | Required | Chat model identifier |
 | `AI_PUBLIC_MODEL_NAME` | Bot | Empty | Optional public-facing model label; otherwise the configured model identifier is used |
 | `AI_TEMPERATURE` | Bot | Provider default | Optional creativity control from `0` to `2` |
 | `BOT_OWNER_NAME` | Bot | `Nando Ganteng` | Public owner/developer name used when identity is relevant |
+| `BOT_PRIVILEGED_USER_IDS` | Bot | `268364999389478912` | Comma-separated owner/developer Discord IDs that receive consistently warm treatment |
 | `WEB_BASE_URL` | Bot | Empty | Optional 9Router-compatible web-tool base URL; leave empty to disable web tools |
 | `WEB_API_KEY` | Bot | Empty | API key for the separate web-tool endpoint |
 | `AI_WEB_SEARCH_MODEL` | Bot | Empty (`exa` in `.env.example`) | 9Router search provider model |

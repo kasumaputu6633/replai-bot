@@ -25,6 +25,7 @@ export interface ResearchMetadata {
   speakerName?: string | undefined;
   speakerAvatarUrl?: string | undefined;
   mentionedUsers?: ResearchParticipant[] | undefined;
+  privilegedUser?: boolean | undefined;
 }
 
 export interface ResearchInput {

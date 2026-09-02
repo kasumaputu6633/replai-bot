@@ -21,6 +21,7 @@
     "@replai/config": "workspace:*",
     "@replai/core": "workspace:*",
     "discord.js": "^14.27.0",
+    "mongodb": "^7.6.0",
     "pino": "^10.3.1"
   }
 }
