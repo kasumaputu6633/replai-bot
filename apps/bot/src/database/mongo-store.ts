@@ -53,12 +53,25 @@ export class MongoStore implements AfkStatePersistence, EvaluationStore {
     try {
       await client.connect();
       const store = new MongoStore(client, client.db(databaseName), logger);
-      await store.#ensureIndex(store.#afk, { guildId: 1 }, { unique: true });
-      await store.#ensureIndex(store.#evaluations, { createdAt: -1 });
-      await store.#ensureIndex(store.#evaluations, {
-        'input.metadata.userId': 1,
-        createdAt: -1,
-      });
+      const indexResults = await Promise.allSettled([
+        store.#ensureIndex(store.#afk, { guildId: 1 }, { unique: true }),
+        store.#ensureIndex(store.#evaluations, { createdAt: -1 }),
+        store.#ensureIndex(store.#evaluations, {
+          'input.metadata.userId': 1,
+          createdAt: -1,
+        }),
+      ]);
+      for (const result of indexResults) {
+        if (result.status === 'rejected') {
+          logger.warn(
+            {
+              errorMessage:
+                result.reason instanceof Error ? result.reason.message : String(result.reason),
+            },
+            'MongoDB index creation skipped',
+          );
+        }
+      }
       return store;
     } catch (error) {
       await client.close().catch(() => undefined);
