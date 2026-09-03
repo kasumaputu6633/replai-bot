@@ -1,5 +1,7 @@
 export { OpenAICompatibleResearchProvider } from './ai/openai-compatible.js';
 export { compactConversationReply } from './ai/conversation-format.js';
+export { ExaWebClient, MAX_EXA_TEXT_CHARACTERS } from './ai/exa.js';
+export type { ExaClientConfig } from './ai/exa.js';
 export type { ResearchProvider } from './ai/provider.js';
 export {
   buildConversationPrompt,

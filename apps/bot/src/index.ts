@@ -62,18 +62,33 @@ const provider = new OpenAICompatibleResearchProvider({
   webFetchModel: config.ai.webFetchModel,
 });
 
-// Web research silently disables itself when any credential is missing, which makes the
+// Web research silently disables itself when a credential is missing, which makes the
 // bot answer verifiable questions from stale memory. Surface that at startup.
-if (!config.ai.webBaseUrl || !config.ai.webApiKey || !config.ai.webSearchModel) {
+// Exa needs no model identifier, so only the key and base URL are required for it.
+const usesExa = /(^|\.)exa\.ai$/iu.test(
+  (() => {
+    try {
+      return config.ai.webBaseUrl ? new URL(config.ai.webBaseUrl).hostname : '';
+    } catch {
+      return '';
+    }
+  })(),
+);
+const webSearchReady = Boolean(
+  config.ai.webBaseUrl && config.ai.webApiKey && (usesExa || config.ai.webSearchModel),
+);
+if (!webSearchReady) {
   logger.warn(
     {
       hasWebBaseUrl: Boolean(config.ai.webBaseUrl),
       hasWebApiKey: Boolean(config.ai.webApiKey),
       hasWebSearchModel: Boolean(config.ai.webSearchModel),
-      hasWebFetchModel: Boolean(config.ai.webFetchModel),
+      usesExa,
     },
-    'Web search disabled; set WEB_BASE_URL, WEB_API_KEY, and AI_WEB_SEARCH_MODEL to verify factual claims',
+    'Web search disabled; set WEB_BASE_URL and WEB_API_KEY (plus AI_WEB_SEARCH_MODEL for gateway providers) to verify factual claims',
   );
+} else {
+  logger.info({ usesExa }, 'Web search enabled');
 }
 
 registerMessageCreateHandler({

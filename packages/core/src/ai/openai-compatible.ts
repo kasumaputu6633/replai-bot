@@ -32,7 +32,8 @@ import {
   buildResearchPrompt,
   buildResponseRepairPrompt,
 } from './prompts.js';
-import type { OpenAICompatibleProviderConfig } from './types.js';
+import type { OpenAICompatibleProviderConfig, WebFetchResult, WebSearchResult } from './types.js';
+import { ExaWebClient } from './exa.js';
 import {
   isAllowedWebFetchUrl,
   MAX_WEB_FETCH_URLS,
@@ -43,6 +44,24 @@ import {
   hasSearchableWebContext,
   NineRouterWebSearchClient,
 } from './web-search.js';
+
+interface WebSearchClient {
+  search(query: string): Promise<readonly WebSearchResult[]>;
+}
+
+interface WebFetchClient {
+  fetch(url: string): Promise<WebFetchResult>;
+}
+
+/** Exa exposes its own REST shape, so it cannot share the gateway client. */
+function isExaEndpoint(baseURL: string): boolean {
+  try {
+    const hostname = new URL(baseURL).hostname.toLowerCase();
+    return hostname === 'exa.ai' || hostname.endsWith('.exa.ai');
+  } catch {
+    return false;
+  }
+}
 
 const MAX_PARTICIPANT_AVATARS = 4;
 const AVATAR_RELEVANT_REQUEST =
@@ -106,8 +125,8 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
   readonly #model: string;
   readonly #systemPrompt: string;
   readonly #temperature: number | undefined;
-  readonly #webFetch: NineRouterWebFetchClient | undefined;
-  readonly #webSearch: NineRouterWebSearchClient | undefined;
+  readonly #webFetch: WebFetchClient | undefined;
+  readonly #webSearch: WebSearchClient | undefined;
 
   public constructor(config: OpenAICompatibleProviderConfig) {
     this.#client = new OpenAI({
@@ -122,21 +141,37 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
       ownerName: config.ownerName,
     });
     this.#temperature = config.temperature;
-    this.#webFetch = config.webFetchModel && config.webApiKey && config.webBaseURL
-      ? new NineRouterWebFetchClient({
-          apiKey: config.webApiKey,
-          baseURL: config.webBaseURL,
-          model: config.webFetchModel,
-        })
-      : undefined;
-    this.#webSearch = config.webSearchModel && config.webApiKey && config.webBaseURL
-      ? new NineRouterWebSearchClient({
-          apiKey: config.webApiKey,
-          baseURL: config.webBaseURL,
-          model: config.webSearchModel,
-          maxResults: config.webSearchMaxResults ?? 5,
-        })
-      : undefined;
+
+    // Exa needs no model identifier, so requiring one would leave search disabled.
+    const usesExa = Boolean(config.webBaseURL && isExaEndpoint(config.webBaseURL));
+    const exa =
+      usesExa && config.webApiKey && config.webBaseURL
+        ? new ExaWebClient({
+            apiKey: config.webApiKey,
+            baseURL: config.webBaseURL,
+            maxResults: config.webSearchMaxResults ?? 5,
+          })
+        : undefined;
+
+    this.#webFetch = exa
+      ? exa
+      : config.webFetchModel && config.webApiKey && config.webBaseURL
+        ? new NineRouterWebFetchClient({
+            apiKey: config.webApiKey,
+            baseURL: config.webBaseURL,
+            model: config.webFetchModel,
+          })
+        : undefined;
+    this.#webSearch = exa
+      ? exa
+      : config.webSearchModel && config.webApiKey && config.webBaseURL
+        ? new NineRouterWebSearchClient({
+            apiKey: config.webApiKey,
+            baseURL: config.webBaseURL,
+            model: config.webSearchModel,
+            maxResults: config.webSearchMaxResults ?? 5,
+          })
+        : undefined;
   }
 
   public async research(input: ResearchInput): Promise<ResearchResult> {

@@ -59,6 +59,58 @@ describe('OpenAICompatibleResearchProvider conversation messages', () => {
     });
   });
 
+  it('enables Exa web search from the base URL without a search model', async () => {
+    const webFetch = vi.fn<typeof fetch>();
+    webFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              url: 'https://discordjs.dev/docs',
+              title: 'FileUploadBuilder',
+              text: 'File upload component builder.',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', webFetch);
+
+    try {
+      const provider = new OpenAICompatibleResearchProvider({
+        apiKey: 'test-key',
+        baseURL: 'https://gateway.example/v1',
+        model: 'provider-model-id',
+        webApiKey: 'exa-key',
+        webBaseURL: 'https://api.exa.ai',
+      });
+
+      const result = await provider.research({
+        question: 'discord.js masih support FileUploadBuilder ga?',
+        source: {
+          messageId: 'source',
+          text: 'discord.js masih support FileUploadBuilder ga?',
+          urls: [],
+          images: [],
+          attachments: [],
+          embeds: [],
+        },
+      });
+
+      expect(webFetch).toHaveBeenCalled();
+      expect(String(webFetch.mock.calls[0]?.[0])).toBe('https://api.exa.ai/search');
+      expect(result.diagnostics).toMatchObject({
+        interaction: 'research',
+        searchPerformed: true,
+        searchResultCount: 1,
+        webSearchConfigured: true,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('configures the OpenAI-compatible client for xAI Grok', async () => {
     const provider = new OpenAICompatibleResearchProvider({
       apiKey: 'xai-key',
