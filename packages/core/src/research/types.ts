@@ -46,4 +46,20 @@ export interface ResearchInput {
 
 export interface ResearchResult {
   content: string;
+  /**
+   * Reports whether the answer was actually grounded in retrieved evidence.
+   *
+   * A confident answer with `searchPerformed: false` and no evidence is the shape of
+   * an unverified claim, so recording this makes that failure measurable.
+   */
+  diagnostics?:
+    | {
+        interaction: 'conversation' | 'research';
+        searchPerformed: boolean;
+        searchResultCount: number;
+        fetchedPageCount: number;
+        evidenceCount: number;
+        webSearchConfigured: boolean;
+      }
+    | undefined;
 }

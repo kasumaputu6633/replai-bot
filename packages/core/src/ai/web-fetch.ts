@@ -6,11 +6,31 @@ export const MAX_WEB_FETCH_URLS = 2;
 export const MAX_WEB_FETCH_CHARACTERS = 6_000;
 
 const WEB_FETCH_TIMEOUT_MS = 20_000;
+/**
+ * Hosts whose pages may be fetched in full.
+ *
+ * Social platforms are included because a shared post is often the claim itself.
+ * Developer documentation and source hosts are included because capability
+ * questions are only answerable against current primary docs.
+ */
 const ALLOWED_WEB_FETCH_HOSTS = [
+  'developer.mozilla.org',
+  'discord.com',
+  'discord.dev',
+  'discordjs.dev',
+  'discordjs.guide',
+  'docs.python.org',
   'facebook.com',
+  'github.com',
+  'github.io',
+  'gitlab.com',
   'instagram.com',
+  'npmjs.com',
+  'pypi.org',
+  'readthedocs.io',
   'redd.it',
   'reddit.com',
+  'stackoverflow.com',
   'threads.net',
   'tiktok.com',
   'twitter.com',

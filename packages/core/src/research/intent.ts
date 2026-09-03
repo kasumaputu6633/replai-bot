@@ -20,8 +20,23 @@ const CURRENT_INFORMATION_REQUEST =
   /\b(?:terbaru|latest|current|recent|update|hari ini|today|besok|tomorrow|cuaca|weather|prakiraan|forecast|harga|price|jadwal|schedule|rilis|release|breaking news)\b/iu;
 const CONVERSATION_FIRST_REQUEST =
   /\b(?:menurut(?:mu|\s+(?:kamu|lu|loe|lo|anda))?|pendapat|opini|what do you think|do you agree|setuju|pilih|vote|nilai|rate|roast|sarkas|sindir|joke|lawak|bercanda|wkwk+|haha+|caption|puisi|cerita|story|brainstorm|ide|curhat|naksir|gebetan|shipping|crush|saling suka|bucin|gimana rasanya|gimana menurut)\b/iu;
+/**
+ * Signals that the question is about people in the server rather than a platform.
+ *
+ * Kept separate from a bare "discord" mention, because asking what the Discord API
+ * supports is a technical question, not private-server gossip.
+ */
 const PRIVATE_CONVERSATION_CONTEXT =
-  /(?:\b(?:discord|server\s+ini|di\s+(?:server|sini)|member|anggota|obrolan|chat|dia|mereka|orang\s+ini)\b|\bdi\s*discord\b)/iu;
+  /(?:\bserver\s+ini\b|\bdi\s+(?:server|sini)\b|\b(?:member|anggota|obrolan|dia|mereka|orang\s+ini)\b|\bdi\s*discord\s+(?:ini|sini)\b)/iu;
+/**
+ * Questions about what a platform, library, or API can actually do.
+ *
+ * These are checkable facts that change between releases, so answering them from
+ * memory produces confident but stale claims. They must be researched even when the
+ * wording sounds casual.
+ */
+const TECHNICAL_CAPABILITY_QUESTION =
+  /(?:\b(?:api|sdk|discord\.?js|discordjs|library|libraries|framework|endpoint|parameter|component|builder|method|function|class|module|package|npm|webhook|intent|scope|permission|docs?|documentation|dokumentasi|versi|version|changelog|deprecated)\b|\b(?:bisa|bisakah|dukung|support|supported|tersedia|available|ada\s+(?:fitur|komponen|opsi|cara)|masih\s+(?:ada|bisa)|udah\s+(?:ada|bisa)|sudah\s+(?:ada|bisa))\b.{0,60}\b(?:api|sdk|discord|library|component|builder|modal|upload|attachment|embed|slash|interaction)\b)/iu;
 
 function inferredMode(input: ResearchInput): ResearchMode {
   if (input.mode) return input.mode;
@@ -37,8 +52,16 @@ export function buildResearchPlan(input: ResearchInput): ResearchPlan {
     input.source.urls.length > 0 || input.source.embeds.some((embed) => Boolean(embed.url));
   const explicitResearch = EXPLICIT_RESEARCH_REQUEST.test(input.question);
   const currentInformation = CURRENT_INFORMATION_REQUEST.test(input.question);
+  // A technical capability claim is verifiable and version-dependent, so it outranks
+  // the casual-conversation heuristics that would otherwise answer it from memory.
+  const technicalCapability =
+    TECHNICAL_CAPABILITY_QUESTION.test(input.question) &&
+    !PRIVATE_CONVERSATION_CONTEXT.test(input.question);
   const conversationFirst =
-    mode === 'answer' && CONVERSATION_FIRST_REQUEST.test(input.question) && !explicitResearch;
+    mode === 'answer' &&
+    CONVERSATION_FIRST_REQUEST.test(input.question) &&
+    !explicitResearch &&
+    !technicalCapability;
   const suppressUnrelatedUrlResearch =
     conversationFirst && PRIVATE_CONVERSATION_CONTEXT.test(input.question);
 
@@ -57,6 +80,7 @@ export function buildResearchPlan(input: ResearchInput): ResearchPlan {
 
   const shouldResearch =
     explicitResearch ||
+    technicalCapability ||
     (!conversationFirst && currentInformation) ||
     (hasExternalUrl && !suppressUnrelatedUrlResearch);
   return {

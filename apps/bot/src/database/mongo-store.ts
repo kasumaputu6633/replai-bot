@@ -21,6 +21,17 @@ export interface ConversationEvaluation {
   userCorrection?: boolean | undefined;
   contextTurnCount?: number | undefined;
   contractVersion?: number | undefined;
+  /** Whether the answer was grounded in retrieved evidence, and how much. */
+  research?:
+    | {
+        interaction: 'conversation' | 'research';
+        searchPerformed: boolean;
+        searchResultCount: number;
+        fetchedPageCount: number;
+        evidenceCount: number;
+        webSearchConfigured: boolean;
+      }
+    | undefined;
 }
 
 export interface EvaluationStore {

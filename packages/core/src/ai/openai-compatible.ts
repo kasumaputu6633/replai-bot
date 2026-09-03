@@ -290,6 +290,14 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
               guarded === evidenced && !isResearchRefusal(guarded)
                 ? appendTrustedSources(delivered, isConversation ? [] : evidenceCatalog)
                 : delivered,
+            diagnostics: {
+              interaction: plan.interaction,
+              searchPerformed: searchTasks.length > 0,
+              searchResultCount: webSearchResults.length,
+              fetchedPageCount: webFetchResults.length,
+              evidenceCount: evidenceCatalog.length,
+              webSearchConfigured: this.#webSearch !== undefined,
+            },
           };
         }
       }

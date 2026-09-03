@@ -30,6 +30,35 @@ describe('OpenAICompatibleResearchProvider conversation messages', () => {
     });
   });
 
+  it('reports when an answer was produced without any web research', async () => {
+    const provider = new OpenAICompatibleResearchProvider({
+      apiKey: 'test-key',
+      baseURL: 'https://gateway.example/v1',
+      model: 'provider-model-id',
+    });
+
+    const result = await provider.research({
+      question: 'discord.js masih support FileUploadBuilder ga?',
+      source: {
+        messageId: 'source',
+        text: 'discord.js masih support FileUploadBuilder ga?',
+        urls: [],
+        images: [],
+        attachments: [],
+        embeds: [],
+      },
+    });
+
+    expect(result.diagnostics).toEqual({
+      interaction: 'research',
+      searchPerformed: false,
+      searchResultCount: 0,
+      fetchedPageCount: 0,
+      evidenceCount: 0,
+      webSearchConfigured: false,
+    });
+  });
+
   it('configures the OpenAI-compatible client for xAI Grok', async () => {
     const provider = new OpenAICompatibleResearchProvider({
       apiKey: 'xai-key',

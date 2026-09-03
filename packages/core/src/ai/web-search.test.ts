@@ -137,6 +137,34 @@ describe('hasSearchableWebContext', () => {
     ).toBe(true);
   });
 
+  it('researches technical capability questions instead of answering from memory', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'di discord js kan ada modal bisa disisipkan tempat upload file drag drop gitu',
+        source: {
+          ...input.source,
+          text: 'di discord js kan ada modal bisa disisipkan tempat upload file drag drop gitu',
+        },
+      }),
+    ).toBe(true);
+
+    expect(
+      hasSearchableWebContext({
+        question: 'discord.js masih support FileUploadBuilder ga?',
+        source: { ...input.source, text: 'discord.js masih support FileUploadBuilder ga?' },
+      }),
+    ).toBe(true);
+  });
+
+  it('still treats opinions about server members as banter, not research', () => {
+    expect(
+      hasSearchableWebContext({
+        question: 'menurut kamu dia di discord ini orangnya gimana?',
+        source: { ...input.source, text: 'menurut kamu dia di discord ini orangnya gimana?' },
+      }),
+    ).toBe(false);
+  });
+
   it('skips search and sources for explicit joke or roast prompts', () => {
     expect(
       hasSearchableWebContext({

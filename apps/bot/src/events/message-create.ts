@@ -342,6 +342,7 @@ export async function handleMessageCreate(
         model: dependencies.model,
         durationMs: Math.round(performance.now() - startedAt),
         ...diagnostics,
+        ...(result.diagnostics ? { research: result.diagnostics } : {}),
       },
       'Research request completed',
     );
@@ -352,6 +353,7 @@ export async function handleMessageCreate(
       durationMs: Math.round(performance.now() - startedAt),
       status: 'completed',
       ...diagnostics,
+      ...(result.diagnostics ? { research: result.diagnostics } : {}),
     });
   } catch (error) {
     dependencies.logger.error(

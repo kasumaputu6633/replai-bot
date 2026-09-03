@@ -289,6 +289,15 @@ describe('Replai system prompt', () => {
     expect(REPLAI_SYSTEM_PROMPT).toContain('Never repeat a guess the user just rejected');
   });
 
+  it('forbids confident absence claims about platform capabilities', () => {
+    expect(REPLAI_SYSTEM_PROMPT).toContain('your training data may be stale');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Do not state that a feature does not exist');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('possibly outdated');
+    expect(REPLAI_SYSTEM_PROMPT).toContain(
+      'An absence claim needs stronger support than a presence claim',
+    );
+  });
+
   it('overrides rough tone for a trusted owner or developer', () => {
     const prompt = buildConversationPrompt({
       question: 'dasar goblok, jawab gue',

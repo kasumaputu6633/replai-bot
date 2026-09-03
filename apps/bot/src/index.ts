@@ -62,6 +62,20 @@ const provider = new OpenAICompatibleResearchProvider({
   webFetchModel: config.ai.webFetchModel,
 });
 
+// Web research silently disables itself when any credential is missing, which makes the
+// bot answer verifiable questions from stale memory. Surface that at startup.
+if (!config.ai.webBaseUrl || !config.ai.webApiKey || !config.ai.webSearchModel) {
+  logger.warn(
+    {
+      hasWebBaseUrl: Boolean(config.ai.webBaseUrl),
+      hasWebApiKey: Boolean(config.ai.webApiKey),
+      hasWebSearchModel: Boolean(config.ai.webSearchModel),
+      hasWebFetchModel: Boolean(config.ai.webFetchModel),
+    },
+    'Web search disabled; set WEB_BASE_URL, WEB_API_KEY, and AI_WEB_SEARCH_MODEL to verify factual claims',
+  );
+}
+
 registerMessageCreateHandler({
   client,
   configuredClientId: config.discordClientId,

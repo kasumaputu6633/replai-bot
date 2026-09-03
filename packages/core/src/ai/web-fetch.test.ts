@@ -16,8 +16,19 @@ describe('isAllowedWebFetchUrl', () => {
   });
 
   it.each([
+    'https://discord.com/developers/docs/interactions/message-components',
+    'https://discordjs.dev/docs/packages/builders/main/FileUploadBuilder:Class',
+    'https://github.com/discordjs/discord.js/releases',
+    'https://www.npmjs.com/package/discord.js',
+    'https://stackoverflow.com/questions/1/example',
+  ])('allows an approved documentation URL: %s', (url) => {
+    expect(isAllowedWebFetchUrl(url)).toBe(true);
+  });
+
+  it.each([
     'https://example.com/article',
     'https://instagram.com.evil.example/reel/1',
+    'https://github.com.evil.example/repo',
     'https://user:password@instagram.com/reel/1',
     'https://instagram.com:8443/reel/1',
     'http://127.0.0.1/internal',
