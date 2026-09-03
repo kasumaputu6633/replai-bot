@@ -26,6 +26,13 @@ export interface ResearchMetadata {
   speakerAvatarUrl?: string | undefined;
   mentionedUsers?: ResearchParticipant[] | undefined;
   privilegedUser?: boolean | undefined;
+  /**
+   * True when the source is unrelated channel chatter rather than a reply target.
+   *
+   * Ambient text must not be treated as the subject of the question, so it is kept
+   * out of search queries.
+   */
+  ambientSource?: boolean | undefined;
 }
 
 export interface ResearchInput {

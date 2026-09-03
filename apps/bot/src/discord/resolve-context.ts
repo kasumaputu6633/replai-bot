@@ -2,8 +2,11 @@ import type { Message } from 'discord.js';
 
 export const MAX_REPLY_CHAIN_DEPTH = 8;
 export const MAX_THREAD_CONTEXT_MESSAGES = 12;
+export const MAX_AMBIENT_CONTEXT_MESSAGES = 4;
 export const MAX_CONTEXT_MESSAGES = 16;
 export const MAX_CONTEXT_CHARACTERS = 20_000;
+export const MAX_AMBIENT_CONTEXT_CHARACTERS = 5_000;
+export const MAX_AMBIENT_CONTEXT_AGE_MS = 10 * 60 * 1_000;
 
 export type DiscordContextRole = 'user' | 'assistant' | 'participant';
 
@@ -20,10 +23,20 @@ export interface DiscordContextTurn {
 export interface ResolveDiscordContextOptions {
   botUserId: string;
   queryingUserId: string;
+  /**
+   * Allows recent channel chatter to act as the evidence source.
+   *
+   * Only set this when the query cannot stand on its own, such as a bare mention
+   * or an explicit reference to what was just said. A self-contained question
+   * must never be answered against an unrelated ambient message.
+   */
+  allowAmbientSource?: boolean | undefined;
+  now?: (() => number) | undefined;
 }
 
 export interface ResolvedDiscordContext {
-  source: Message;
+  /** Present only for an explicit reply chain, or for an allowed ambient fallback. */
+  source: Message | null;
   turns: DiscordContextTurn[];
 }
 
@@ -55,11 +68,12 @@ function authorNameFor(message: Message): string {
 function compactMessages(
   messages: readonly Message[],
   options: ResolveDiscordContextOptions,
+  limits: { maxMessages: number; maxCharacters: number },
 ): DiscordContextTurn[] {
   const turns: DiscordContextTurn[] = [];
-  let remainingCharacters = MAX_CONTEXT_CHARACTERS;
+  let remainingCharacters = limits.maxCharacters;
 
-  for (const message of messages.slice(0, MAX_CONTEXT_MESSAGES)) {
+  for (const message of messages.slice(0, limits.maxMessages)) {
     const text = message.content.trim();
     if (text.length > 0 && remainingCharacters === 0) {
       break;
@@ -119,14 +133,14 @@ async function resolveReplyChain(query: Message): Promise<Message[]> {
   return newestFirst.reverse();
 }
 
-async function fetchRecentChannelHistory(query: Message): Promise<Message[]> {
+async function fetchRecentChannelHistory(query: Message, limit: number): Promise<Message[]> {
   try {
     if (!('messages' in query.channel) || typeof query.channel.messages?.fetch !== 'function') {
       return [];
     }
     const messages = await query.channel.messages.fetch({
       before: query.id,
-      limit: MAX_THREAD_CONTEXT_MESSAGES,
+      limit,
       cache: false,
     });
     return [...messages.values()];
@@ -136,37 +150,57 @@ async function fetchRecentChannelHistory(query: Message): Promise<Message[]> {
 }
 
 /**
- * Resolves the query's same-channel evidence chain and bounded channel/thread context.
- * When an immediate reference is present, it resolves the reply chain.
- * Inaccessible ancestors or fetch failures fall back gracefully to the resolved context.
+ * Resolves the query's evidence chain plus bounded surrounding conversation.
+ *
+ * A reply chain is authoritative: its oldest ancestor becomes the source. Without a
+ * reply, recent channel messages are returned as ambient context only, and they are
+ * promoted to `source` exclusively when the caller opts in via `allowAmbientSource`.
+ * Ambient messages are additionally bounded by age so a stale topic cannot hijack a
+ * fresh question. Inaccessible ancestors and fetch failures degrade gracefully.
  */
 export async function resolveDiscordContext(
   query: Message,
   options: ResolveDiscordContextOptions,
 ): Promise<ResolvedDiscordContext | null> {
   const replyChain = await resolveReplyChain(query);
-  const source = replyChain[0];
+  const replySource = replyChain[0] ?? null;
+  const isThread = query.channel.isThread();
+  const usesFullHistory = replySource !== null || isThread;
+  const historyLimit = usesFullHistory
+    ? MAX_THREAD_CONTEXT_MESSAGES
+    : MAX_AMBIENT_CONTEXT_MESSAGES;
+  const maxMessages = usesFullHistory ? MAX_CONTEXT_MESSAGES : MAX_AMBIENT_CONTEXT_MESSAGES;
+  const maxCharacters = usesFullHistory
+    ? MAX_CONTEXT_CHARACTERS
+    : MAX_AMBIENT_CONTEXT_CHARACTERS;
 
   const chainIds = new Set(replyChain.map((message) => message.id));
-  const availableHistorySlots = MAX_CONTEXT_MESSAGES - replyChain.length;
-  const history = (await fetchRecentChannelHistory(query))
+  const availableHistorySlots = maxMessages - replyChain.length;
+  const now = options.now?.() ?? Date.now();
+  const history = (await fetchRecentChannelHistory(query, historyLimit))
     .filter((message) => message.id !== query.id && !chainIds.has(message.id))
+    .filter(
+      (message) =>
+        usesFullHistory || now - message.createdTimestamp <= MAX_AMBIENT_CONTEXT_AGE_MS,
+    )
     .sort(compareMessages)
-    .slice(-availableHistorySlots);
+    .slice(-Math.max(availableHistorySlots, 0));
   const contextMessages = [...replyChain, ...history].sort(compareMessages);
 
-  if (!source) {
-    if (contextMessages.length === 0) {
-      return null;
-    }
-    return {
-      source: contextMessages[contextMessages.length - 1]!,
-      turns: compactMessages(contextMessages, options),
-    };
+  if (contextMessages.length === 0) {
+    return null;
+  }
+
+  const turns = compactMessages(contextMessages, options, { maxMessages, maxCharacters });
+
+  if (replySource) {
+    return { source: replySource, turns };
   }
 
   return {
-    source,
-    turns: compactMessages(contextMessages, options),
+    source: options.allowAmbientSource
+      ? (contextMessages[contextMessages.length - 1] ?? null)
+      : null,
+    turns,
   };
 }

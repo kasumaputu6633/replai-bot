@@ -1,6 +1,8 @@
 import type { Message } from 'discord.js';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  MAX_AMBIENT_CONTEXT_AGE_MS,
+  MAX_AMBIENT_CONTEXT_MESSAGES,
   MAX_CONTEXT_CHARACTERS,
   MAX_REPLY_CHAIN_DEPTH,
   MAX_THREAD_CONTEXT_MESSAGES,
@@ -149,7 +151,7 @@ describe('resolveDiscordContext', () => {
     const result = await resolveDiscordContext(query, resolveOptions);
 
     expect(result?.turns).toHaveLength(MAX_REPLY_CHAIN_DEPTH);
-    expect(result?.source.id).toBe('1');
+    expect(result?.source?.id).toBe('1');
     expect(messages[1]?.fetchReference).not.toHaveBeenCalled();
   });
 
@@ -171,7 +173,7 @@ describe('resolveDiscordContext', () => {
     expect(cyclic?.turns.map((turn) => turn.messageId)).toEqual(['inaccessible', 'middle']);
   });
 
-  it('rejects cross-channel and missing immediate references', async () => {
+  it('ignores a cross-channel reference and returns nothing for an empty channel', async () => {
     const parent = fakeMessage({ id: 'parent' });
     const crossChannel = fakeMessage({
       id: 'query',
@@ -183,6 +185,59 @@ describe('resolveDiscordContext', () => {
     await expect(resolveDiscordContext(crossChannel, resolveOptions)).resolves.toBeNull();
     await expect(resolveDiscordContext(withoutReference, resolveOptions)).resolves.toBeNull();
     expect(crossChannel.fetchReference).not.toHaveBeenCalled();
+  });
+
+  it('never promotes ambient chatter to source for a self-contained question', async () => {
+    const ambient = fakeMessage({ id: 'ambient', content: 'unrelated chatter', createdTimestamp: 1 });
+    const channel = fakeChannel(false, [ambient]);
+    const query = fakeMessage({ id: 'query', createdTimestamp: 2, channel });
+
+    const result = await resolveDiscordContext(query, { ...resolveOptions, now: () => 2 });
+
+    expect(result).not.toBeNull();
+    expect(result?.source).toBeNull();
+    expect(result?.turns.map((turn) => turn.messageId)).toEqual(['ambient']);
+  });
+
+  it('promotes ambient chatter to source only when the caller opts in', async () => {
+    const ambient = fakeMessage({ id: 'ambient', content: 'unrelated chatter', createdTimestamp: 1 });
+    const channel = fakeChannel(false, [ambient]);
+    const query = fakeMessage({ id: 'query', createdTimestamp: 2, channel });
+
+    const result = await resolveDiscordContext(query, {
+      ...resolveOptions,
+      allowAmbientSource: true,
+      now: () => 2,
+    });
+
+    expect(result?.source).toBe(ambient);
+  });
+
+  it('bounds ambient context by count and drops stale messages', async () => {
+    const now = 10_000_000;
+    const fresh = Array.from({ length: MAX_AMBIENT_CONTEXT_MESSAGES + 3 }, (_, index) =>
+      fakeMessage({
+        id: `fresh-${index}`,
+        content: `fresh ${index}`,
+        createdTimestamp: now - 1_000 * (index + 1),
+      }),
+    );
+    const stale = fakeMessage({
+      id: 'stale',
+      content: 'old topic',
+      createdTimestamp: now - MAX_AMBIENT_CONTEXT_AGE_MS - 1,
+    });
+    const channel = fakeChannel(false, [...fresh, stale]);
+    const query = fakeMessage({ id: 'query', createdTimestamp: now, channel });
+
+    const result = await resolveDiscordContext(query, {
+      ...resolveOptions,
+      allowAmbientSource: true,
+      now: () => now,
+    });
+
+    expect(result?.turns.length).toBeLessThanOrEqual(MAX_AMBIENT_CONTEXT_MESSAGES);
+    expect(result?.turns.map((turn) => turn.messageId)).not.toContain('stale');
   });
 
   it('adds bounded thread history, deduplicates the chain, and excludes the query', async () => {

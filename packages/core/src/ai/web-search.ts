@@ -44,7 +44,7 @@ export function buildWebSearchQuery(input: ResearchInput, now = new Date()): str
   }
 
   const normalizedQuestion = input.question.replace(/\s+/gu, ' ').trim().toLocaleLowerCase('en-US');
-  const sourceText = input.source.text?.trim();
+  const sourceText = input.metadata?.ambientSource ? undefined : input.source.text?.trim();
   const distinctSourceText =
     sourceText?.replace(/\s+/gu, ' ').toLocaleLowerCase('en-US') === normalizedQuestion
       ? undefined

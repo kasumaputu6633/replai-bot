@@ -3,6 +3,9 @@ import { MongoClient, type Collection, type Db, type Document } from 'mongodb';
 import type { Logger } from 'pino';
 import type { AfkGuildState, AfkStatePersistence } from '../afk/state-store.js';
 
+/** Identifies the prompt and context contract a recorded turn ran under. */
+export const EVALUATION_CONTRACT_VERSION = 2;
+
 export interface ConversationEvaluation {
   input: ResearchInput;
   response?: string | undefined;
@@ -10,6 +13,14 @@ export interface ConversationEvaluation {
   durationMs: number;
   status: 'completed' | 'failed';
   error?: string | undefined;
+  /** How the evidence source was chosen, so context drift is auditable. */
+  sourceSelection?: 'reply' | 'memory' | 'direct' | 'ambient' | undefined;
+  /** True when unrelated channel chatter was promoted to the evidence source. */
+  ambientSourceUsed?: boolean | undefined;
+  /** True when the user was correcting a previous bot assumption. */
+  userCorrection?: boolean | undefined;
+  contextTurnCount?: number | undefined;
+  contractVersion?: number | undefined;
 }
 
 export interface EvaluationStore {

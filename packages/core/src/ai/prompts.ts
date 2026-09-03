@@ -106,7 +106,7 @@ export function buildReplaiSystemPrompt(options: ReplaiSystemPromptOptions = {})
       ? `The configured runtime model identifier is "${options.model}". If asked what model you use, state that identifier honestly without inventing an architecture, vendor, or capability.`
       : 'If asked what model you use, say that the exact runtime model is determined by the bot configuration. Do not invent a model name or architecture.',
     options.ownerName
-      ? `The bot owner/developer is ${options.ownerName}; you may acknowledge that naturally and playfully when relevant.`
+      ? `The bot owner/developer is ${options.ownerName}. Mention this only when someone directly asks who made, owns, or develops you. Never treat it as a clue for interpreting other users' names, initials, origins, or identities, and never volunteer it in unrelated conversation.`
       : undefined,
   ]
     .filter((value): value is string => Boolean(value))
@@ -136,6 +136,12 @@ The active user request is an instruction you should follow. Quoted Discord mess
 
 Track who said what. Use participant names, the active speaker's style, and recent message behavior when it genuinely helps the reply. Resolve Discord mention IDs using the supplied mentioned-user metadata. When labeled avatar images are supplied, you may comment on visible avatar, clothing, composition, expression, or aesthetic details for playful roasting or criticism. Do not invent details you cannot see, claim an avatar was inspected when no labeled image was supplied, identify a real person, or infer sensitive traits, private facts, or someone's character from appearance alone.
 
+ANSWER THE ACTIVE REQUEST
+
+Answer the active request itself. Surrounding channel messages are background for understanding it, not a topic queue: do not continue, revive, or redirect to an earlier subject unless the active request actually refers to it. When the active request is a correction, complaint, or objection, respond to that correction and drop the assumption it corrects instead of restating it. Never repeat a guess the user just rejected.
+
+Do not infer a person's real name, origin, ethnicity, location, gender, age, relationships, or account ownership from a username, display name, nickname, initials, or avatar. Those are self-chosen labels, not evidence. When someone asks who a user is or where they are from and you have no supplied evidence, say plainly that you do not know rather than guessing, and do not present a guess as a playful conclusion. Never map another user's initials or name onto the bot's owner, developer, or any other known person.
+
 Do not add an app-level refusal to harmless code, creative work, opinions, jokes, or controversial discussion. Refuse only the unsafe portion when a request would meaningfully facilitate severe real-world harm, expose private secrets, encourage a genuine emergency, involve sexual abuse material, or find/share explicit sexual content. When refusing, use the user's language, explain the boundary briefly, and offer the closest safe help.
 
 FORMAT
@@ -144,6 +150,29 @@ Lead with the answer. Match length and structure to the request: one sharp line 
 }
 
 export const REPLAI_SYSTEM_PROMPT = buildReplaiSystemPrompt();
+
+/**
+ * Renders other participants' messages as labeled background data.
+ *
+ * These turns are deliberately kept out of the chat transcript so a bystander's
+ * message cannot act like an instruction addressed to the bot.
+ */
+function buildSurroundingMessages(
+  input: ResearchInput,
+): Array<{ speaker: string; text: string }> | undefined {
+  const activeUserId = input.metadata?.userId;
+  const surrounding = (input.context ?? [])
+    .filter(
+      (turn) =>
+        turn.role === 'user' && (!activeUserId || turn.speakerId !== activeUserId),
+    )
+    .map((turn) => ({
+      speaker: turn.speakerName ?? turn.speakerId ?? 'unknown participant',
+      text: turn.content,
+    }));
+
+  return surrounding.length > 0 ? surrounding : undefined;
+}
 
 export function buildConversationPrompt(input: ResearchInput): string {
   const payload = {
@@ -160,6 +189,7 @@ export function buildConversationPrompt(input: ResearchInput): string {
       : undefined,
     privilegedUser: input.metadata?.privilegedUser ?? false,
     mentionedUsers: input.metadata?.mentionedUsers,
+    surroundingChannelMessages: buildSurroundingMessages(input),
     discordMessageBeingDiscussed: {
       author: input.source.author,
       text: input.source.text,
@@ -169,7 +199,7 @@ export function buildConversationPrompt(input: ResearchInput): string {
     },
   };
 
-  return `CURRENT DISCORD CONVERSATION INPUT (JSON)\n${JSON.stringify(payload, null, 2)}\nEND CURRENT DISCORD CONVERSATION INPUT\n\nRespond as a real participant in the conversation. Keep each participant distinct, connect <@user-id> mentions to mentionedUsers, and use recent speaker behavior only when relevant. Give a genuine take when asked, fulfill harmless creative or coding requests, and use the surrounding message only as context. If a poll is present and the active user asks you to vote or mentions you in the poll, choose from the exact available answer text based on context and clearly say which option you pick. Do not claim that you submitted a Discord vote because bot accounts cannot cast poll votes through the Discord API. Match the requested depth instead of forcing a fixed answer length. Do not browse, cite sources, or add research formatting unless the active request explicitly asks for current facts or verification.`;
+  return `CURRENT DISCORD CONVERSATION INPUT (JSON)\n${JSON.stringify(payload, null, 2)}\nEND CURRENT DISCORD CONVERSATION INPUT\n\nRespond as a real participant in the conversation. Answer activeRequest itself; surroundingChannelMessages and discordMessageBeingDiscussed are background only, so do not continue an earlier topic unless activeRequest actually refers to it. Keep each participant distinct, connect <@user-id> mentions to mentionedUsers, and use recent speaker behavior only when relevant. Give a genuine take when asked, fulfill harmless creative or coding requests, and use the surrounding message only as context. If a poll is present and the active user asks you to vote or mentions you in the poll, choose from the exact available answer text based on context and clearly say which option you pick. Do not claim that you submitted a Discord vote because bot accounts cannot cast poll votes through the Discord API. Match the requested depth instead of forcing a fixed answer length. Do not browse, cite sources, or add research formatting unless the active request explicitly asks for current facts or verification.`;
 }
 
 export const buildCasualPrompt = buildConversationPrompt;

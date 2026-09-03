@@ -106,6 +106,7 @@ export const researchInputSchema = z.object({
         .max(MAX_RESEARCH_PARTICIPANTS)
         .optional(),
       privilegedUser: z.boolean().optional(),
+      ambientSource: z.boolean().optional(),
     })
     .optional(),
 });

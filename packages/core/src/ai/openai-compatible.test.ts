@@ -97,20 +97,19 @@ describe('OpenAICompatibleResearchProvider conversation messages', () => {
     expect(completionCreate).toHaveBeenCalledOnce();
     const request = completionCreate.mock.calls[0]?.[0];
     expect(request).toMatchObject({ model: 'provider-model-id', temperature: 0.85 });
-    expect(request.messages).toHaveLength(4);
+    // A bystander's message must not enter the transcript as an addressed turn; it
+    // travels inside the prompt payload as labeled background instead.
+    expect(request.messages).toHaveLength(3);
     expect(request.messages[0]).toMatchObject({ role: 'system' });
     expect(request.messages[0].content).toContain('"Ox Alpha"');
     expect(request.messages[0].content).toContain('Nando Ganteng');
     expect(request.messages[1]).toEqual({
-      role: 'user',
-      content: '[Nanda]: Menurutku warnanya terlalu ramai.',
-    });
-    expect(request.messages[2]).toEqual({
       role: 'assistant',
       content: 'Iya, kontrasnya bertabrakan.',
     });
-    expect(request.messages[3].role).toBe('user');
-    expect(request.messages[3].content[0].text).toContain('"activeRequest"');
+    expect(request.messages[2].role).toBe('user');
+    expect(request.messages[2].content[0].text).toContain('"activeRequest"');
+    expect(request.messages[2].content[0].text).toContain('Menurutku warnanya terlalu ramai.');
   });
 
   it('omits temperature when the provider should use its own default', async () => {

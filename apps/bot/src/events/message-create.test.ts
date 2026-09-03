@@ -30,6 +30,7 @@ interface FakeMessageOptions {
   mentionsBot?: boolean;
   poll?: SourcePoll;
   replyError?: Error;
+  createdTimestamp?: number;
 }
 
 interface FakeChannel {
@@ -59,6 +60,20 @@ function fakeChannel(thread = false): FakeChannel {
     send: vi.fn().mockResolvedValue({ id: 'continuation' }),
     messages: { fetch: vi.fn().mockResolvedValue(new Map()) },
   };
+}
+
+/**
+ * Builds a channel that already contains unrelated conversation.
+ *
+ * Production channels are never empty, so an empty-history fixture silently hid the
+ * ambient-source defect. Regression coverage must exercise this shape.
+ */
+function busyChannel(history: readonly Message[], thread = false): FakeChannel {
+  const channel = fakeChannel(thread);
+  channel.messages.fetch = vi
+    .fn()
+    .mockResolvedValue(new Map(history.map((message) => [message.id, message])));
+  return channel;
 }
 
 function fakeMessage(options: FakeMessageOptions): Message {
@@ -118,7 +133,8 @@ function fakeMessage(options: FakeMessageOptions): Message {
         },
       },
     },
-    createdTimestamp: Number(options.id.replace(/\D/gu, '')) || 1,
+    createdTimestamp:
+      options.createdTimestamp ?? (Number(options.id.replace(/\D/gu, '')) || 1),
     mentions: {
       users: {
         has: (id: string) => mentionedUsers.some((user) => user.id === id),
@@ -518,5 +534,90 @@ describe('handleMessageCreate', () => {
       [],
     ]);
     expect(input.comparisonSources).toHaveLength(2);
+  });
+
+  it('answers a self-contained question against itself even when the channel is busy', async () => {
+    const ambient = fakeMessage({
+      id: '100',
+      content: 'nando ganteng bgsttttt wkwkwk',
+      authorId: 'other-user',
+      authorName: 'sayang gopit',
+    });
+    const channel = busyChannel([ambient]);
+    const query = fakeMessage({
+      id: '101',
+      content: '<@bot> besok Denpasar Barat cerah ngga ya?',
+      channel,
+    });
+    const deps = dependencies();
+
+    await handleMessageCreate(query, deps);
+
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.source).toMatchObject({
+      messageId: '101',
+      text: 'besok Denpasar Barat cerah ngga ya?',
+    });
+    expect(input.metadata).not.toMatchObject({ ambientSource: true });
+  });
+
+  it('uses ambient chatter as source only for a deictic follow-up', async () => {
+    const now = Date.now();
+    const ambient = fakeMessage({
+      id: '200',
+      content: 'harga tiketnya naik lagi',
+      authorId: 'other-user',
+      authorName: 'Nandos',
+      createdTimestamp: now - 30_000,
+    });
+    const channel = busyChannel([ambient]);
+    const query = fakeMessage({
+      id: '201',
+      content: '<@bot> ini beneran?',
+      channel,
+      createdTimestamp: now,
+    });
+    const deps = dependencies();
+
+    await handleMessageCreate(query, deps);
+
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.source.messageId).toBe('200');
+    expect(input.metadata?.ambientSource).toBe(true);
+  });
+
+  it('drops ambient context when the user corrects a previous assumption', async () => {
+    const ambient = fakeMessage({
+      id: '300',
+      content: 'clue NG itu siapa ya',
+      authorId: 'other-user',
+      authorName: 'sayang gopit',
+    });
+    const channel = busyChannel([ambient]);
+    const query = fakeMessage({ id: '301', content: '<@bot> Beda user itu cok', channel });
+    const deps = dependencies();
+
+    await handleMessageCreate(query, deps);
+
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.context ?? []).toEqual([]);
+    expect(input.source.messageId).toBe('301');
+  });
+
+  it('records source selection diagnostics for evaluation', async () => {
+    const recordConversation = vi.fn().mockResolvedValue(undefined);
+    const deps = { ...dependencies(), evaluationStore: { recordConversation } };
+    const query = fakeMessage({ id: '400', content: '<@bot> jelaskan singkat dong' });
+
+    await handleMessageCreate(query, deps);
+
+    expect(recordConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'completed',
+        sourceSelection: 'direct',
+        ambientSourceUsed: false,
+        userCorrection: false,
+      }),
+    );
   });
 });

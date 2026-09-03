@@ -11,8 +11,14 @@ import {
 import { Events, MessageFlags, type Client, type Message } from 'discord.js';
 import type { Logger } from 'pino';
 import type { EvaluationStore } from '../database/mongo-store.js';
+import { EVALUATION_CONTRACT_VERSION } from '../database/mongo-store.js';
 import { normalizeDiscordMessage } from '../discord/normalize-message.js';
-import { DEFAULT_QUESTION, parseQuestion } from '../discord/parse-question.js';
+import {
+  correctsPreviousAssumption,
+  DEFAULT_QUESTION,
+  parseQuestion,
+  referencesSurroundingContext,
+} from '../discord/parse-question.js';
 import {
   parseResearchRequest,
   type ResearchContextTurn,
@@ -102,6 +108,9 @@ function pollMentionsBot(message: Message, botUserId: string): boolean {
   return Boolean(question?.includes(`<@${botUserId}>`) || question?.includes(`<@!${botUserId}>`));
 }
 
+/** Records how the evidence source was chosen so evaluations can spot context drift. */
+export type SourceSelection = 'reply' | 'memory' | 'direct' | 'ambient';
+
 function buildResearchInput(
   question: string,
   source: SourceContext,
@@ -110,6 +119,7 @@ function buildResearchInput(
   message: Message,
   botUserId: string,
   privilegedUserIds?: ReadonlySet<string>,
+  ambientSource = false,
 ): ResearchInput {
   const input = parseResearchRequest({
     question,
@@ -134,6 +144,7 @@ function buildResearchInput(
       speakerAvatarUrl: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
       mentionedUsers: mentionedParticipants(message, botUserId),
       privilegedUser: privilegedUserIds?.has(message.author.id) ?? false,
+      ...(ambientSource ? { ambientSource: true } : {}),
     },
   };
 }
@@ -176,15 +187,21 @@ export async function handleMessageCreate(
 
   const isThread = message.channel.isThread();
   const memoryKey = conversationMemoryKey(message.guildId, message.channelId);
-  const existingMemory = isThread ? dependencies.threadMemory.get(memoryKey) : null;
   const question = parseQuestion(message.content, botUserId, botRoleIds);
+  const isCorrection = correctsPreviousAssumption(question);
+  const existingMemory = isThread && !isCorrection
+    ? dependencies.threadMemory.get(memoryKey)
+    : null;
   const normalizedDirectSource = !message.reference?.messageId
     ? normalizeDiscordMessage(message)
     : null;
+  // A deictic question ("ini beneran?") cannot stand alone, so it must not claim itself
+  // as the source. Anything carrying its own evidence still does.
+  const wantsSurroundingContext = !isCorrection && referencesSurroundingContext(question);
   const directSource =
     normalizedDirectSource &&
     (hasStandaloneEvidence(normalizedDirectSource) ||
-      (!existingMemory && question !== DEFAULT_QUESTION))
+      (!existingMemory && question !== DEFAULT_QUESTION && !wantsSurroundingContext))
       ? { ...normalizedDirectSource, text: question }
       : null;
 
@@ -208,42 +225,69 @@ export async function handleMessageCreate(
     return;
   }
 
+  // A self-contained question is answered on its own terms. Recent channel chatter may
+  // only become the source when the query is deictic or a bare mention, and never when
+  // the user is correcting the bot, because that is when stale context misleads most.
+  const allowAmbientSource = !directSource && wantsSurroundingContext;
   const resolved = await resolveDiscordContext(message, {
     botUserId,
     queryingUserId: message.author.id,
+    allowAmbientSource,
   });
 
-  if (message.reference?.messageId && !resolved) {
+  if (message.reference?.messageId && !resolved?.source) {
     await replySafely(message, INACCESSIBLE_REFERENCE_RESPONSE, dependencies.logger);
     return;
   }
 
-  const resolvedSource = resolved ? normalizeDiscordMessage(resolved.source) : directSource;
+  const resolvedSource = resolved?.source ? normalizeDiscordMessage(resolved.source) : null;
   const memory =
     existingMemory &&
     (!resolvedSource || isStoredConversationSource(resolvedSource.messageId, existingMemory))
       ? existingMemory
       : null;
-  const source =
-    memory?.source ??
-    resolvedSource ??
-    (normalizedDirectSource ? { ...normalizedDirectSource, text: question } : null);
+  const isReplySource = Boolean(message.reference?.messageId && resolvedSource);
+  // A bare mention with no usable context still deserves an answer, so fall back to the
+  // query message itself rather than refusing.
+  const selfSource = normalizedDirectSource
+    ? { ...normalizedDirectSource, text: question }
+    : null;
+  const source = memory?.source ?? resolvedSource ?? directSource ?? selfSource;
+  const sourceSelection: SourceSelection | null = memory
+    ? 'memory'
+    : resolvedSource
+      ? isReplySource
+        ? 'reply'
+        : 'ambient'
+      : (directSource ?? selfSource)
+        ? 'direct'
+        : null;
 
-  if (!source) {
+  if (!source || !sourceSelection) {
     await replySafely(message, MISSING_REFERENCE_RESPONSE, dependencies.logger);
     return;
   }
+  // A correction must not be answered against the context that produced the mistake.
+  const contextTurns = isCorrection ? [] : (resolved?.turns ?? []);
   const input = buildResearchInput(
     question,
     source,
-    resolved?.turns ?? [],
+    contextTurns,
     memory,
     message,
     botUserId,
     dependencies.privilegedUserIds,
+    sourceSelection === 'ambient',
   );
 
   const startedAt = performance.now();
+  const diagnostics = {
+    sourceSelection,
+    ambientSourceUsed: sourceSelection === 'ambient',
+    userCorrection: isCorrection,
+    contextTurnCount: input.context?.length ?? 0,
+    contractVersion: EVALUATION_CONTRACT_VERSION,
+  } as const;
 
   try {
     const result = await withTyping(message, dependencies.logger, async () => {
@@ -297,6 +341,7 @@ export async function handleMessageCreate(
         userId: message.author.id,
         model: dependencies.model,
         durationMs: Math.round(performance.now() - startedAt),
+        ...diagnostics,
       },
       'Research request completed',
     );
@@ -306,6 +351,7 @@ export async function handleMessageCreate(
       model: dependencies.model,
       durationMs: Math.round(performance.now() - startedAt),
       status: 'completed',
+      ...diagnostics,
     });
   } catch (error) {
     dependencies.logger.error(
@@ -317,6 +363,7 @@ export async function handleMessageCreate(
         userId: message.author.id,
         model: dependencies.model,
         durationMs: Math.round(performance.now() - startedAt),
+        ...diagnostics,
       },
       'Research request failed',
     );
@@ -326,6 +373,7 @@ export async function handleMessageCreate(
       durationMs: Math.round(performance.now() - startedAt),
       status: 'failed',
       error: error instanceof Error ? error.message : String(error),
+      ...diagnostics,
     });
     await replySafely(message, RESEARCH_FAILURE_RESPONSE, dependencies.logger);
   }

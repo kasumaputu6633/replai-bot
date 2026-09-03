@@ -86,7 +86,12 @@ describe('conversation prompts', () => {
     expect(prompt).toContain('"language": "Indonesian"');
     expect(prompt).toContain('"profanityIntensity": "strong"');
     expect(prompt).toContain('equally blunt, confrontational profanity');
-    expect(prompt).not.toContain('fuck fuck fuck');
+    // Another participant's wording stays background data and must not feed the
+    // active speaker's style profile.
+    expect(prompt).toContain('"surroundingChannelMessages"');
+    expect(prompt.split('"activeSpeakerCommunicationProfile"')[1]?.split('"activeSpeaker"')[0]).not.toContain(
+      'fuck fuck fuck',
+    );
   });
 
   it('does not inherit aggression from another channel participant', () => {
@@ -265,6 +270,23 @@ describe('Replai system prompt', () => {
     expect(prompt).toContain('"Ox Alpha"');
     expect(prompt).toContain('Nando Ganteng');
     expect(REPLAI_SYSTEM_PROMPT).not.toContain('running on the "Ox Alpha" model');
+  });
+
+  it('forbids identity inference and confines owner mentions to direct questions', () => {
+    const prompt = buildReplaiSystemPrompt({ ownerName: 'Nando Ganteng' });
+
+    expect(prompt).toContain('Mention this only when someone directly asks');
+    expect(prompt).toContain('Never treat it as a clue');
+    expect(prompt).toContain('Do not infer a person');
+    expect(prompt).toContain('say plainly that you do not know');
+    expect(prompt).toContain('Never map another user');
+  });
+
+  it('requires answering the active request over reviving old topics', () => {
+    expect(REPLAI_SYSTEM_PROMPT).toContain('ANSWER THE ACTIVE REQUEST');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('not a topic queue');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('drop the assumption it corrects');
+    expect(REPLAI_SYSTEM_PROMPT).toContain('Never repeat a guess the user just rejected');
   });
 
   it('overrides rough tone for a trusted owner or developer', () => {

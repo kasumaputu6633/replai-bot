@@ -230,13 +230,23 @@ export class OpenAICompatibleResearchProvider implements ResearchProvider {
           ...(this.#temperature === undefined ? {} : { temperature: this.#temperature }),
           messages: [
             { role: 'system', content: this.#systemPrompt },
-            ...(validatedInput.context ?? []).map<ChatCompletionMessageParam>((turn) => ({
-              role: turn.role,
-              content:
-                turn.role === 'user' && turn.speakerName
-                  ? `[${turn.speakerName}]: ${turn.content}`
-                  : turn.content,
-            })),
+            // Only the active user's own turns and the bot's replies belong in the
+            // transcript. Bystander messages travel inside the prompt payload as
+            // labeled data so they cannot impersonate an instruction to the bot.
+            ...(validatedInput.context ?? [])
+              .filter(
+                (turn) =>
+                  turn.role === 'assistant' ||
+                  !validatedInput.metadata?.userId ||
+                  turn.speakerId === validatedInput.metadata.userId,
+              )
+              .map<ChatCompletionMessageParam>((turn) => ({
+                role: turn.role,
+                content:
+                  turn.role === 'user' && turn.speakerName
+                    ? `[${turn.speakerName}]: ${turn.content}`
+                    : turn.content,
+              })),
             { role: 'user', content: attemptContent },
           ],
         });
