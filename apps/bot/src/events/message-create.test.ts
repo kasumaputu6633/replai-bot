@@ -604,6 +604,36 @@ describe('handleMessageCreate', () => {
     expect(input.source.messageId).toBe('301');
   });
 
+  it('uses the directly replied bot claim when a user challenges a reply chain', async () => {
+    const original = fakeMessage({
+      id: '310',
+      content: 'buatkan dong sample discord js latest',
+      authorId: 'user',
+    });
+    const botClaim = fakeMessage({
+      id: '311',
+      content: 'Discord API tidak punya komponen file picker di dalam modal.',
+      authorId: 'bot',
+      authorBot: true,
+      reference: original,
+    });
+    const query = fakeMessage({
+      id: '312',
+      content: '<@bot> setau saya ada deh',
+      reference: botClaim,
+    });
+    const deps = dependencies();
+
+    await handleMessageCreate(query, deps);
+
+    const input = deps.providerResearch.mock.calls[0]?.[0] as ResearchInput;
+    expect(input.source.messageId).toBe('311');
+    expect(input.source.text).toBe(
+      'Discord API tidak punya komponen file picker di dalam modal.',
+    );
+    expect(input.context ?? []).toEqual([]);
+  });
+
   it('records source selection diagnostics for evaluation', async () => {
     const recordConversation = vi.fn().mockResolvedValue(undefined);
     const deps = { ...dependencies(), evaluationStore: { recordConversation } };

@@ -240,7 +240,13 @@ export async function handleMessageCreate(
     return;
   }
 
-  const resolvedSource = resolved?.source ? normalizeDiscordMessage(resolved.source) : null;
+  // Corrections address the bot claim immediately above them. The oldest reply-chain
+  // ancestor is useful for ordinary context, but using it here hides the claim being
+  // challenged and can turn a verification request into an unrelated answer.
+  const resolvedMessage = isCorrection
+    ? (resolved?.replyTarget ?? resolved?.source)
+    : resolved?.source;
+  const resolvedSource = resolvedMessage ? normalizeDiscordMessage(resolvedMessage) : null;
   const memory =
     existingMemory &&
     (!resolvedSource || isStoredConversationSource(resolvedSource.messageId, existingMemory))

@@ -37,6 +37,8 @@ export interface ResolveDiscordContextOptions {
 export interface ResolvedDiscordContext {
   /** Present only for an explicit reply chain, or for an allowed ambient fallback. */
   source: Message | null;
+  /** The message directly replied to, unlike source which is the chain's oldest ancestor. */
+  replyTarget: Message | null;
   turns: DiscordContextTurn[];
 }
 
@@ -164,6 +166,7 @@ export async function resolveDiscordContext(
 ): Promise<ResolvedDiscordContext | null> {
   const replyChain = await resolveReplyChain(query);
   const replySource = replyChain[0] ?? null;
+  const replyTarget = replyChain[replyChain.length - 1] ?? null;
   const isThread = query.channel.isThread();
   const usesFullHistory = replySource !== null || isThread;
   const historyLimit = usesFullHistory
@@ -194,13 +197,14 @@ export async function resolveDiscordContext(
   const turns = compactMessages(contextMessages, options, { maxMessages, maxCharacters });
 
   if (replySource) {
-    return { source: replySource, turns };
+    return { source: replySource, replyTarget, turns };
   }
 
   return {
     source: options.allowAmbientSource
       ? (contextMessages[contextMessages.length - 1] ?? null)
       : null,
+    replyTarget: null,
     turns,
   };
 }

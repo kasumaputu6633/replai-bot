@@ -100,6 +100,7 @@ describe('resolveDiscordContext', () => {
     const result = await resolveDiscordContext(query, resolveOptions);
 
     expect(result?.source).toBe(oldest);
+    expect(result?.replyTarget).toBe(userReply);
     expect(result?.turns).toEqual([
       {
         messageId: '1',
@@ -196,6 +197,7 @@ describe('resolveDiscordContext', () => {
 
     expect(result).not.toBeNull();
     expect(result?.source).toBeNull();
+    expect(result?.replyTarget).toBeNull();
     expect(result?.turns.map((turn) => turn.messageId)).toEqual(['ambient']);
   });
 
