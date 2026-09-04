@@ -16,7 +16,7 @@ const CONTEXT_REFERENCE =
  * acknowledges the correction and then repeats the same wrong claim.
  */
 const USER_CORRECTION =
-  /(?:\b(?:beda|bukan|salah|keliru|ketuker|ketukar|bkn)\b|\bkan\s+(?:yang|itu|beda)\b|\bnggak\s+(?:gitu|begitu)\b|\bgak\s+(?:gitu|begitu)\b|\b(?:wrong|not\s+me|different\s+user|mistaken)\b)/iu;
+  /(?:\b(?:beda|bukan|salah|keliru|ketuker|ketukar|bkn|bukannya|setahu|setau|seingat)\b|\bkan\s+(?:yang|itu|beda)\b|\bnggak\s+(?:gitu|begitu)\b|\bgak\s+(?:gitu|begitu)\b|\b(?:wrong|not\s+me|different\s+user|mistaken|i\s+(?:think|thought))\b)/iu;
 
 export function parseQuestion(
   content: string,

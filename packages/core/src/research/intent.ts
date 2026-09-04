@@ -37,13 +37,24 @@ const PRIVATE_CONVERSATION_CONTEXT =
  */
 const TECHNICAL_CAPABILITY_QUESTION =
   /(?:\b(?:api|sdk|discord\.?js|discordjs|library|libraries|framework|endpoint|parameter|component|builder|method|function|class|module|package|npm|webhook|intent|scope|permission|docs?|documentation|dokumentasi|versi|version|changelog|deprecated)\b|\b(?:bisa|bisakah|dukung|support|supported|tersedia|available|ada\s+(?:fitur|komponen|opsi|cara)|masih\s+(?:ada|bisa)|udah\s+(?:ada|bisa)|sudah\s+(?:ada|bisa))\b.{0,60}\b(?:api|sdk|discord|library|component|builder|modal|upload|attachment|embed|slash|interaction)\b)/iu;
+const KNOWLEDGE_CHALLENGE =
+  /(?:\b(?:setahu|setau|seingat|bukannya|harusnya|mestinya|kayaknya|sepertinya|perasaan)\b|\bmasa\s+(?:sih|nggak|gak)\b|\b(?:yakin|serius)\??$|\bcoba\s+(?:cek|periksa)\b|\bi\s+(?:think|thought)\b)/iu;
+
+function challengesTechnicalClaim(input: ResearchInput): boolean {
+  return (
+    KNOWLEDGE_CHALLENGE.test(input.question) &&
+    Boolean(input.source.text && TECHNICAL_CAPABILITY_QUESTION.test(input.source.text))
+  );
+}
 
 function inferredMode(input: ResearchInput): ResearchMode {
   if (input.mode) return input.mode;
   if ((input.comparisonSources?.length ?? 0) > 0 || COMPARISON_QUESTION.test(input.question)) {
     return 'compare';
   }
-  return VERIFICATION_QUESTION.test(input.question) ? 'verify' : 'answer';
+  return VERIFICATION_QUESTION.test(input.question) || challengesTechnicalClaim(input)
+    ? 'verify'
+    : 'answer';
 }
 
 export function buildResearchPlan(input: ResearchInput): ResearchPlan {
@@ -55,7 +66,7 @@ export function buildResearchPlan(input: ResearchInput): ResearchPlan {
   // A technical capability claim is verifiable and version-dependent, so it outranks
   // the casual-conversation heuristics that would otherwise answer it from memory.
   const technicalCapability =
-    TECHNICAL_CAPABILITY_QUESTION.test(input.question) &&
+    (TECHNICAL_CAPABILITY_QUESTION.test(input.question) || challengesTechnicalClaim(input)) &&
     !PRIVATE_CONVERSATION_CONTEXT.test(input.question);
   const conversationFirst =
     mode === 'answer' &&

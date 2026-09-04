@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 import type { ResearchInput } from './types.js';
 import { buildResearchPlan } from './intent.js';
 
-function input(question: string, options: { image?: boolean; url?: string } = {}): ResearchInput {
+function input(
+  question: string,
+  options: { image?: boolean; url?: string; sourceText?: string } = {},
+): ResearchInput {
   return {
     question,
     source: {
       messageId: 'source',
-      text: question,
+      text: options.sourceText ?? question,
       urls: options.url ? [options.url] : [],
       images: options.image ? [{ url: 'https://cdn.discordapp.com/image.png' }] : [],
       attachments: [],
@@ -85,5 +88,26 @@ describe('buildResearchPlan', () => {
       interaction: 'research',
       search: 'single',
     });
+  });
+
+  it('researches a short challenge to a technical claim in the replied message', () => {
+    expect(
+      buildResearchPlan(
+        input('setau saya ada deh', {
+          sourceText: 'Discord API tidak punya komponen file picker di dalam modal.',
+        }),
+      ),
+    ).toEqual({
+      mode: 'verify',
+      interaction: 'research',
+      search: 'single',
+      fetchSourceUrls: false,
+    });
+  });
+
+  it('keeps the same short phrase conversational without a technical replied claim', () => {
+    expect(
+      buildResearchPlan(input('setau saya ada deh', { sourceText: 'Warung itu tutup hari ini.' })),
+    ).toMatchObject({ interaction: 'conversation', search: 'none' });
   });
 });

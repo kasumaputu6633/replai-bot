@@ -111,6 +111,61 @@ describe('OpenAICompatibleResearchProvider conversation messages', () => {
     }
   });
 
+  it('searches when a short follow-up challenges a replied technical claim', async () => {
+    const webFetch = vi.fn<typeof fetch>();
+    webFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              url: 'https://discordjs.dev/docs/packages/builders/main/FileUploadBuilder:Class',
+              title: 'FileUploadBuilder',
+              text: 'Creates file upload components for Discord modals.',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', webFetch);
+
+    try {
+      const provider = new OpenAICompatibleResearchProvider({
+        apiKey: 'test-key',
+        baseURL: 'https://gateway.example/v1',
+        model: 'provider-model-id',
+        webApiKey: 'exa-key',
+        webBaseURL: 'https://api.exa.ai',
+      });
+
+      const result = await provider.research({
+        question: 'setau saya ada deh',
+        source: {
+          messageId: 'replied-bot-message',
+          text: 'Discord API tidak punya komponen file picker di dalam modal.',
+          urls: [],
+          images: [],
+          attachments: [],
+          embeds: [],
+        },
+      });
+
+      const requestBody = JSON.parse(String(webFetch.mock.calls[0]?.[1]?.body)) as {
+        query: string;
+      };
+      expect(requestBody.query).toContain('setau saya ada deh');
+      expect(requestBody.query).toContain('Discord API tidak punya komponen file picker');
+      expect(result.diagnostics).toMatchObject({
+        interaction: 'research',
+        searchPerformed: true,
+        searchResultCount: 1,
+        evidenceCount: 1,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('configures the OpenAI-compatible client for xAI Grok', async () => {
     const provider = new OpenAICompatibleResearchProvider({
       apiKey: 'xai-key',
